@@ -531,6 +531,43 @@ ggplot() +
         legend.title=element_text("Species",size=30),
         legend.text=element_text(size=30))
 
+
+
+ggplot() +
+  geom_boxplot(data = Rs_plots[Rs_plots$Corr_LinFlux<=6 & Rs_plots$Site!="KentFarm",],
+               aes(x = as.factor(n_holes), y = Corr_LinFlux, fill = Symbiont), color = "black", 
+               show.legend = TRUE,  size = 2, alpha = 0.8, position = position_dodge(0.5), notch = TRUE,
+               notchwidth = 0.5,) +
+  scale_color_manual(values = c("#4D54E8", "#ECC01D", "#A2A197"))+ 
+  scale_fill_manual(values = GoAvsGo)+ 
+  xlab('Number of Holes') +
+  ylab(expression(paste("Soil Efflux  [", mu, "mol CO" [2], " m"^2, "  s "^-1, "] "  ))) +
+  theme(legend.position="top",
+        axis.text=element_text(size=30),
+        axis.title=element_text(size=30),
+        legend.title=element_text("Species",size=30),
+        legend.text=element_text(size=30))
+
+ggplot() +
+  geom_boxplot(data = Rs_plots[Rs_plots$Corr_LinFlux<=6,],
+               aes(x = as.factor(n_holes), y = Corr_LinFlux, fill = Symbiont), color = "black", 
+               show.legend = TRUE,  size = 2, alpha = 0.4, position = position_dodge(0.5),
+               notch = TRUE,
+               notchwidth = 0.75) +
+  scale_color_manual(values = c("#4D54E8", "#ECC01D", "#A2A197"))+ 
+  scale_fill_manual(values = c("#4D54E8", "#ECC01D", "#A2A197"))+ 
+  xlab('Number of Holes') +
+  ylab(expression(paste("Corr. Soil Efflux  [", mu, "mol CO" [2], " m"^2, "  s "^-1, "] "  ))) +
+  theme(legend.position="top",
+        axis.text=element_text(size=30),
+        axis.title=element_text(size=30),
+        legend.title=element_text("Species",size=30),
+        legend.text=element_text(size=30))
+
+
+
+
+
 ggplot() +
   geom_boxplot(data = Rs_plots[Rs_plots$Corr_LinFlux<=6 & Rs_plots$Symbiont=="ECM"
                                & Rs_plots$Site!="KentFarm",], 
