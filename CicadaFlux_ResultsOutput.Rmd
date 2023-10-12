@@ -256,10 +256,12 @@ Rs_data$Corr_LinFlux_HCI <- (10 * Rs_data$Corr_VTotal * Rs_data$Pressure * (1 - 
 
 Rs_plots <- Rs_data[Rs_data$LinReg_R2>=0.85 & Rs_data$Corr_LinFlux>0,]
 
-length(Rs_data$UnqMeas[Rs_data$LinReg_R2<0.85])
-length(Rs_data$UnqMeas[Rs_data$LinReg_R2>=0.85])
 
-353/(90+353)
+##//How much data is excluded based on poor R2
+# length(Rs_data$UnqMeas[Rs_data$LinReg_R2<0.85])
+# length(Rs_data$UnqMeas[Rs_data$LinReg_R2>=0.85])
+# 
+# 353/(90+353)
 
 ```
 
@@ -269,6 +271,7 @@ length(Rs_data$UnqMeas[Rs_data$LinReg_R2>=0.85])
 ```{r fig.asp = 0.9, fig.width = 15, echo=FALSE}
 knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
 
+##//Week vector
 result <- data.frame(
   Rs_plots$day,
   cut_Date = cut(as.Date(Rs_plots$day), "week"),
@@ -406,25 +409,7 @@ Flux_Time2 <- ggplot() +
         axis.text.x = element_text(angle = 45, vjust = 0.7, hjust=0.7))
 Flux_Time2
 
-
-##Put plots together
-grid.arrange(
-  Ts_Time,
-  VWC_Time,
-  Flux_Time,
-  ncol = 1,
-  nrow = 3,
-  respect = FALSE,
-  clip = FALSE
-)
-
-
-###
-names(Rs_plots)
-
 Rs_plots$SitePairs <- paste(Rs_plots$Site, Rs_plots$Pair, sep = "")
-
-
 
 ##//Wrote file and removed and observations that did not have complete set of paired collars
 # write.csv(Rs_plots, "D:/Dropbox/Projects/Indiana/Data/CicadaFlux/HolePlotDataframe.csv")
@@ -530,8 +515,10 @@ Quick_RData_sdMMS$Corr_LinFlux
 Quick_RData_sumGW$Corr_LinFlux
 Quick_RData_sdGW$Corr_LinFlux
 
-douts <- Rs_plots[Rs_plots$Corr_LinFlux<=6 & Rs_plots$Site!="KentFarm",]
-write.csv(douts, "D:/Dropbox/Projects/Indiana/Data/Zenodo/CicadaChamberFlux_2021.csv", row.names = F)
+
+##//Saved clean data for Zenodo
+# douts <- Rs_plots[Rs_plots$Corr_LinFlux<=6 & Rs_plots$Site!="KentFarm",]
+# write.csv(douts, "D:/Dropbox/Projects/Indiana/Data/Zenodo/CicadaChamberFlux_2021.csv", row.names = F)
 
 
 ```
@@ -545,6 +532,7 @@ write.csv(douts, "D:/Dropbox/Projects/Indiana/Data/Zenodo/CicadaChamberFlux_2021
 ##//Uniformed Prior
 # my.prior <- set_prior("uniform(-30000,30000)", class = "b")
 
+##//All model runs are commented out and outputs are loaded to increase write speeds
 ####///Temperature model
 # TS_mod1 <- brm(
 #     SoilT_C ~ Week + Symbiont,
