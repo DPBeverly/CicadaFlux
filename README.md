@@ -37,7 +37,7 @@ Grab micromet data from AmeriFlux website "https://ameriflux.lbl.gov/sites/sitei
 ##//Note the data you download will likely contain more data than used in the manuscript as data is updated quarterly
 
 ####//Global respiration estimates 
-##//Soil respiration rasters are obstained from Global Gridded 1-km Annual Soil Respiration and Uncertainty Derived from SRDB V3
+##//Soil respiration rasters are obtained from Global Gridded 1-km Annual Soil Respiration and Uncertainty Derived from SRDB V3
 "https://daac.ornl.gov/CMS/guides/CMS_Global_Soil_Respiration.html"
 ##//Download data move .img files to the common working directory housing rmd files
 ##//  This analysis will use the mean, lower quantile (25) and upper quantile (75) estimates 
