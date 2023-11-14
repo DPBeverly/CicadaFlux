@@ -1,0 +1,1677 @@
+---
+title: "R CicadaFlux Analysis"
+output:
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: console
+---
+
+# Cicada Flux Measurements from 2021
+
+### Two Questions are developed on how cicada emergene influences soil respiration and carbon fluxes:
+
+#### *__1)__* To what extent does cicada emergence hole density influence R[S]?
+
+#### *__2)__* How do soils beneath different tree types (i.e., AM vs EcM mycorrhizal fungi) modulate these effects?
+  
+#### *__3)__* To what extent do emergence holes influence ecosystem respiration (RECO)?
+  
+  
+#####        Mechanistic hypothesis: 
+  
+![Conceptual processes influencing RS following cicada emergence and predictions for tree mycorrhizal responses to cicada hole densities. Cicada emergence holes increase water infiltration **(a))**  reducing CO2 and oxygen diffusion creating an anaerobic environment which should decrease C fluxes **(b))**. Conversely, emergence holes can improve aerobic conditions thus increasing autotrophic respiration (Ra) or prime microbial respiration (Rh) via the modulation of dissolved organic C for both mycorrhizal types. The magnitude and direction of the RS response to cicada emergence holes is likely influenced by precipitation patterns and soil saturation levels directly following rain events. Detailed microbial metabolic processes within soils beneath AM- and EcM-associating trees are expected to vary based on biogeochemical responses to changes in baseline soil C stocks and transported dissolved organic C enhancing microbial decomposition (i.e., priming).](D:/Dropbox/Projects/Indiana/Data/CicadaFlux/CicadaConceptualFigure.png)
+
+
+
+
+```{r echo=FALSE, include = FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+##// This Initial part of the script is used for data management purposes have been LiCor 8100 files are combined, and corrected for collar spacing, as well as compiled with soil moisture and associate meta data. The complete and compiled files used throughout the analysis are available via Zenodo and codes are available via GitHub. The raw 8100 files are available via emailing the dbeverl@iu.edu
+
+##//Package management
+##//This script helps outline data used in the analysis of cicada hole effects on soil respiration
+# Load the zen4R library and other packages
+library(zen4R)
+library(rstudioapi)
+library(readr)
+library(emmeans)
+library(sf)
+library(raster)
+library(geoR)
+library(gstat)
+library(fields)
+library(rgdal)
+library(tidyverse)
+library(maptools) 
+library(rgeos)
+library(tmap)
+library(sp) 
+library(readxl)
+library(ggplot2)
+library(lubridate)
+library(hutils)
+library(brms)
+library(modelr)
+library(sjPlot)
+library(sjstats)
+library(RColorBrewer)
+library(tidybayes)
+library(dplyr)
+library(tidyr)
+library(tidyselect)
+library(stringr)
+library(gridExtra)
+
+##//Themes and color ramps
+theme_set(theme_classic())
+GoAvsGo <- c("#6F263D", "#236192", "#A2AAAD", "#000000")
+
+#################################################################
+##//Update where you have code, data, and working directory defined
+MyDir <- dirname(rstudioapi::getActiveDocumentContext()$path)
+
+##//Set the directory 
+setwd(MyDir)
+getwd()
+
+##// Or chose the directory 
+# choose.dir()
+# dirname(rstudioapi::getActiveDocumentContext()$path)
+
+##//Define the DOI for the Zenodo record you want to download data from
+doi <- "10.5281/zenodo.10125404" 
+
+dir(dirname(rstudioapi::getActiveDocumentContext()$path))
+
+##//Download data from Zenodo
+CicadaData <- download_zenodo(
+  doi,
+  path = dirname(rstudioapi::getActiveDocumentContext()$path),
+  files = list(),
+  logger = NULL,
+  quiet = FALSE)
+
+##//Check to make sure the data files have been downloaded to the correct directory
+dir(dirname(rstudioapi::getActiveDocumentContext()$path))
+
+##//Read in the chamber data
+Rs_plots <- read_csv(paste(dirname(rstudioapi::getActiveDocumentContext()$path), 
+                           "CicadaChamberFlux_2021.csv", sep = "/"))
+
+##//Removing the one outlier in the data
+Rs_plots <- Rs_plots[Rs_plots$Corr_LinFlux<=6,]
+
+##//Read in the cicada hole data
+meholes <- read_csv(paste(dirname(rstudioapi::getActiveDocumentContext()$path), 
+                           "MMSF_GW_KF_CICADAHOLES_2021.csv", sep = "/"))
+
+##//Updating string names
+meholes$Fungi_Type <- ifelse(meholes$Fungi_Type=="ECM", "EcM", meholes$Fungi_Type)
+
+
+##//Shapefiles used in the study 
+##//Collar shapefiles
+MMSF_pheno <- readOGR(dsn = dirname(rstudioapi::getActiveDocumentContext()$path), 
+                      layer="PhenoHoles_MMSF_v2")
+###//Plot boundary
+MMSF_pheno_bound <- readOGR(dsn = dirname(rstudioapi::getActiveDocumentContext()$path), 
+                            layer="PhenoHoles_Dissolve_20_v2")
+
+##//other than the data listed in the Zenodo repository you 
+#    will need to independently go download data from:
+    # AmeriFlux for the US-MMS site
+    # Global Gridded 1-km Annual Soil Respiration and Uncertainty Derived from SRDB V3
+    # Active brood maps provided by the USDA
+
+
+##//Grab micromet data from AmeriFlux website
+"https://ameriflux.lbl.gov/sites/siteinfo/US-MMS"
+#//Download the US-MMS Base version (CC-BY-4.0) containing data hourly fluxes and meteorological variables
+##//Once downloaded unzip the folder in the working directory
+##//Note the data you download will contain more data than used in the manuscript as data is updated quarterly
+
+##//AmeriFlux data
+##//This is only an example the data file name may change based on when data is downloaded
+##//Update the file path to match local pathways 
+
+##//This is only an example the data file name may change based on when data is downloaded!!!!!!!!!!
+AmeriFlux_File <- paste(dirname(rstudioapi::getActiveDocumentContext()$path), 
+                        "AMF_US-MMS_BASE-BADM_21-5/AMF_US-MMS_BASE_HR_21-5.csv" , sep = "/")
+dat_46m <- read.csv(AmeriFlux_File, 
+                    skip = 2, na.strings = -9999)
+
+####//Global respiration estimates 
+##//Soil respiration rasters are obstained from Global Gridded 1-km Annual Soil Respiration and Uncertainty Derived from SRDB V3
+"https://daac.ornl.gov/CMS/guides/CMS_Global_Soil_Respiration.html"
+##//Download data move .img files to a common working directory
+##//  This analysis will use the mean, lower quantile (25) and upper quantile (75) estimates 
+
+##//After downloading .img files in working directories and update data pathways
+SoilFlux <- read_stars( paste(dirname(rstudioapi::getActiveDocumentContext()$path), 
+  "CMS_Global_Soil_Respiration_1736/CMS_Global_Soil_Respiration_1736/data/Clipped_soil_respiration_mean_eastern_US.img",
+  sep = "/")) 
+SoilFlux_25 <- read_stars(paste(dirname(rstudioapi::getActiveDocumentContext()$path),
+  "CMS_Global_Soil_Respiration_1736/CMS_Global_Soil_Respiration_1736/data/Clipped_soil_respiration_Q25_eastern_US.img",
+  sep = "/"))
+SoilFlux_75 <- read_stars(paste(dirname(rstudioapi::getActiveDocumentContext()$path),
+  "/CMS_Global_Soil_Respiration_1736/CMS_Global_Soil_Respiration_1736/data/Clipped_soil_respiration_Q75_eastern_US.img", 
+  sep = "/"))
+
+
+##// Active cicada broods shapefiles "https://data.fs.usda.gov/geodata/edw/datasets.php?xmlKeyword=cicada"
+##  download shapefiles, move files to working directory, and update pathways
+cicadapolys <- st_read(paste(dirname(rstudioapi::getActiveDocumentContext()$path), 
+                              "CicadaCounties.shp", sep = "/"))
+
+##//Optional data product for making the maps but not used in the R code
+# ##//State outlines
+# ##//Generic state shapefile (https://lehd.ces.census.gov/data/schema/latest/lehd_shapefiles.html)
+# ##  download shapefiles, move files to working directory, and update pathways
+# statepolys <- st_read("D:/Dropbox/Projects/Indiana/Data/GIS/tl_2021_us_state/tl_2021_us_state.shp")
+# state_polys <- statepolys %>% st_transform("+proj=moll")
+
+
+
+```
+
+  
+
+#### Seasonal Trends in soil temperature and moisture
+```{r fig.asp = 0.9, fig.width = 15, echo=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+
+##//This code has syntax for saving and loading statistical tests used throughout the manuscript. The .rda files used in figure generation are included with data. Running and saving all the models may take several hours depending on computer and memory configurations
+
+##//Note only model loads commands have been updated to run through the common directory. Full functionality will require user to update pathways to user specifications 
+
+
+# Load the zen4R library
+library(zen4R)
+library(rstudioapi)
+library(readr)
+library(emmeans)
+
+##//Main Figure 2
+##//Week vector
+result <- data.frame(
+  Rs_plots$day,
+  cut_Date = cut(as.Date(Rs_plots$day), "week"),
+  cut_POSIXt = cut(as.POSIXct(Rs_plots$day), "week"),
+  stringsAsFactors = FALSE)
+
+Rs_plots$Week <- result$cut_POSIXt
+
+##//Timeseries plot of soil temperature across all weeks of measurement
+Ts_Timex <- ggplot() +
+  geom_boxplot(data = Rs_plots[Rs_plots$Corr_LinFlux<=6,],
+               aes(x = Week, y = SoilT_C), color = "black", 
+               show.legend = TRUE,  size = 1, alpha = 0.4, 
+               notch = F, notchwidth = 0.5) +
+  ylab(expression(paste("Soil Temperature [C]" ))) +
+  annotate("text", x = Rs_plots$Week[1], y = 26, label = "a)    ", size = 20) +
+  theme(legend.position="NA",
+        axis.text=element_text(size=30),
+        axis.title=element_text(size=30),
+        legend.title=element_text("Species",size=30),
+        legend.text=element_text(size=30),
+        axis.text.x = element_text(angle = 45, vjust = 0.7, hjust=0.7))
+Ts_Timex
+
+##//Timeseries plot of soil moisture across all weeks of measurement
+VWC_Timex <- ggplot() +
+  geom_boxplot(data = Rs_plots[Rs_plots$Corr_LinFlux<=6,],
+               aes(x = Week, y = SoilVWC_pct), color = "black", 
+               show.legend = TRUE,  size = 1, alpha = 0.4, 
+               notch = F, notchwidth = 0.5) +
+  ylab(expression(paste("Soil Moisture [% VWC]" ))) +
+  annotate("text", x = Rs_plots$Week[1], y = 70, label = "b)    ", size = 20) +
+  theme(legend.position="NA",
+        axis.text=element_text(size=30),
+        axis.title=element_text(size=30),
+        legend.title=element_text("Species",size=30),
+        legend.text=element_text(size=30),
+        axis.text.x = element_text(angle = 45, vjust = 0.7, hjust=0.7))
+
+VWC_Timex
+
+##//Timeseries plot of soil efflux across all weeks of measurement
+Flux_Time <- ggplot() +
+  geom_boxplot(data = Rs_plots[Rs_plots$Corr_LinFlux<=6,],
+               aes(x = Week, y = Corr_LinFlux), color = "black", 
+               show.legend = TRUE,  size = 1, alpha = 0.4, 
+               notch = F, notchwidth = 0.5) +
+
+  xlab('Date') +
+
+  ylab(expression(paste("R" ["S"] , " [",mu, "mol " , " CO" ["2"], "  m"^"-2 ", "s"^"-1", "]"))) +
+  annotate("text", x = Rs_plots$Week[1], y = 7, label = "c)    ", size = 20) +
+  theme(legend.position="NA",
+        axis.text=element_text(size=30),
+        axis.title=element_text(size=30),
+        legend.title=element_text("Species",size=30),
+        legend.text=element_text(size=30),
+        axis.text.x = element_text(angle = 45, vjust = 0.7, hjust=0.7))
+Flux_Time
+
+# ##Put plots together
+# grid.arrange(
+#   Ts_Timex,
+#   VWC_Timex,
+#   Flux_Timex,
+#   ncol = 1,
+#   nrow = 3,
+#   respect = FALSE,
+#   clip = FALSE
+# )
+# 
+
+##//NOTE: For the manuscript the figures were combined in inkscape
+
+Rs_plots$SitePairs <- paste(Rs_plots$Site, Rs_plots$Pair, sep = "")
+
+
+##//Supplemental Figure 2
+##//Summarize data for weekly estimats
+HoleFigures <- Rs_plots %>%
+  #dplyr::mutate(day = as.Date(Date_ct, format="%d-%m-%Y")) %>%
+  dplyr::group_by(Week, Symbiont) %>% # group by the day column ##//mean looks good
+  dplyr::summarise_if(is.numeric, mean, na.rm = TRUE) %>%  
+  na.omit
+
+##//Plot of how hole densities changed over the summer
+ggplot() +
+  geom_boxplot(data = HoleFigures, aes(x = as.factor(Week), y = n_holes), 
+               show.legend = TRUE,  size = 1) +
+  ylab(expression(paste("Mean Cicada Holes", "  collar"^"-1 "))) +
+  xlab('Date') +
+  theme(legend.position = "top",
+        axis.text=element_text(size=30),
+        axis.title=element_text(size=30),
+        legend.title=element_text("Species",size=30),
+        legend.text=element_text(size=30),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+
+
+
+```
+
+*Figure:* Soil temperature (**a)**) and moisture (**b)**) corresponding to soil respiration observations  (**c)**)  located at base of trees associated with arbuscular mycorrhizal and ectomycorrhizal fungi. Measurements represent weekly responses as soil respiration measurements were conducted on different days within the same week. Additional figure highlights the change in cicada holes throughout the summer of 2021
+
+
+
+
+```{r, echo=FALSE}
+
+##//This section of code is used to determine the statistical models for soil temperature,
+#    soil moisture, soil respiration, relationships across weeks and number of cicada holes
+
+##//This section uses chamber observations 
+#Rs_plots
+
+##//Uniformed Prior
+my.prior <- set_prior("uniform(-30000,30000)", class = "b")
+
+##//All model runs are commented out and outputs are loaded to increase write speeds
+##///Temperature over time model
+# TS_mod1x <- brm(
+#     SoilT_C ~ Week,
+#     data = Rs_plots[Rs_plots$Corr_LinFlux<=6,],
+#     prior = my.prior,
+#     family =  "normal",
+#     seed = 12345, 
+#     iter = 2000,
+#     chains = 4,
+#     cores = 4,
+#     control = list(adapt_delta = 0.90, max_treedepth = 15))
+
+##//Once you run the model you can save model outputs reducing complication time
+##//Update directory to locations where you want to store model runs
+# save(TS_mod1x, file = "D:/Dropbox/Projects/Indiana/Data/CicadaFlux/ModelSaves/TS_mod1x.rda")
+
+##//Load prior model runs
+##//Update directory to locations where you  to store model runs
+# load("D:/Dropbox/Projects/Indiana/Data/CicadaFlux/ModelSaves/TS_mod1x.rda")
+
+##// Uncomment to view model summaries and plots 
+# summary(TS_mod1x, prob = 0.89)
+# bayes_R2(TS_mod1x, prob = c(0.03, 0.97))
+# plot_model(TS_mod1x, type = "pred", terms = c("Week"), show.data = TRUE) +
+#   theme_bw()
+
+###########
+##///Soil Moisture over time model
+# SM_mod1x <- brm(
+#     SoilVWC_pct ~ Week,
+#     data = Rs_plots[Rs_plots$Corr_LinFlux<=6,],
+#     prior = my.prior,
+#     family =  "normal",
+#     seed = 12345,
+#     iter = 2000,
+#     chains = 4,
+#     cores = 4,
+#     control = list(adapt_delta = 0.90, max_treedepth = 15))
+# 
+# ##//Once you run the model you can save model outputs reducing complication time
+# ##//Update directory to locations where you want to store model runs
+# save(SM_mod1x, file = "D:/Dropbox/Projects/Indiana/Data/CicadaFlux/ModelSaves/SM_mod1x.rda")
+# 
+# ##//Load prior model runs
+# ##//Update directory to locations where you  to store model runs
+# load("D:/Dropbox/Projects/Indiana/Data/CicadaFlux/ModelSaves/SM_mod1x.rda")
+# 
+# ##// Uncomment to view model summaries and plots 
+# summary(SM_mod1x, prob = 0.89)
+# bayes_R2(SM_mod1x, prob = c(0.03, 0.97))
+
+#############################################################################
+#//Are one vs 2 vs 3 holes different
+
+###//Making hole a factor
+# Rs_plots$Hole_Collarf <- as.factor(Rs_plots$Hole_Collar)
+
+# ##///Temperature over time with respect to number of cicada holes model
+# TS_mod2x <- brm(
+#     SoilT_C ~ Week + Hole_Collarf,
+#     data = Rs_plots[Rs_plots$Corr_LinFlux<=6,],
+#     prior = my.prior,
+#     family =  "normal",
+#     seed = 12345,
+#     iter = 2000,
+#     chains = 4,
+#     cores = 4,
+#     control = list(adapt_delta = 0.90, max_treedepth = 15))
+# 
+# ##//Once you run the model you can save model outputs reducing complication time
+# ##//Update directory to locations where you want to store model runs
+# save(TS_mod2x, file = "D:/Dropbox/Projects/Indiana/Data/CicadaFlux/ModelSaves/TS_mod2x.rda")
+# 
+# ##//Load prior model runs
+# ##//Update directory to locations where you  to store model runs
+# load("D:/Dropbox/Projects/Indiana/Data/CicadaFlux/ModelSaves/TS_mod2x.rda")
+# 
+# ##// Uncomment to view model summaries and plots 
+# summary(TS_mod2x, prob = 0.89)
+# bayes_R2(TS_mod2x, prob = c(0.03, 0.97))
+# plot_model(TS_mod2x, type = "pred", terms = c("Week", "Hole_Collarf"), show.data = TRUE) +
+#   theme_bw()
+# 
+# ##//Post hoc tests
+# ##//get the adjusted means
+# (TS_mod2x_em <- emmeans(TS_mod2x,  ~ Week))
+# 
+# ##//get all possible contrasts
+# (cont <- contrast(TS_mod2x_em, "tukey"))
+
+
+##///Soil Moisture over time with respect to number of cicada holes model
+# SM_mod2x <- brm(
+#     SoilVWC_pct ~ Week + Hole_Collarf,
+#     data = Rs_plots[Rs_plots$Corr_LinFlux<=6,],
+#     prior = my.prior,
+#     family =  "normal",
+#     seed = 12345,
+#     iter = 2000,
+#     chains = 4,
+#     cores = 4,
+#     control = list(adapt_delta = 0.90, max_treedepth = 15))
+# 
+# ##//Once you run the model you can save model outputs reducing complication time
+# ##//Update directory to locations where you want to store model runs
+# save(SM_mod2x, file = "D:/Dropbox/Projects/Indiana/Data/CicadaFlux/ModelSaves/SM_mod2x.rda")
+# 
+# ##//Load prior model runs
+# ##//Update directory to locations where you  to store model runs
+# load("D:/Dropbox/Projects/Indiana/Data/CicadaFlux/ModelSaves/SM_mod2x.rda")
+# 
+# ##// Uncomment to view model summaries and plots 
+# summary(SM_mod2x, prob = 0.89)
+# bayes_R2(SM_mod2x, prob = c(0.03, 0.97))
+# plot_model(SM_mod2x, type = "pred", terms = c("Week", "Hole_Collarf"), show.data = TRUE) +
+#   theme_bw()
+# 
+# ##//Post hoc tests
+# ##//get the adjusted means
+# (SM_mod2x_em <- emmeans(SM_mod2x,  ~ Week))
+# 
+# ##//get all possible contrasts
+# (cont <- contrast(SM_mod2x_em, "tukey"))
+```
+
+
+```{r fig.asp = 0.8, fig.width = 15, echo=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+library(emmeans)
+##///This section corresponds to the Rs models described in the manuscript
+
+##//Timeseries model
+##//Site is set as random effect 
+# Rs_mod1x <- brm(
+#     Corr_LinFlux ~ Week + Symbiont + (1|Site),
+#     data = Rs_plots[Rs_plots$Corr_LinFlux<=6,],
+#     prior = my.prior,
+#     family =  "normal",
+#     seed = 12345,
+#     iter = 2000,
+#     chains = 4,
+#     cores = 4,
+#     control = list(adapt_delta = 0.90, max_treedepth = 15))
+
+# ##//Once you run the model you can save model outputs reducing complication time
+# ##//Update directory to locations where you want to store model runs
+# save(Rs_mod1x, file = "D:/Dropbox/Projects/Indiana/Data/CicadaFlux/ModelSaves/Rs_mod1x.rda")
+# 
+# ##//Load prior model runs
+# ##//Update directory to locations where you  to store model runs
+# load("D:/Dropbox/Projects/Indiana/Data/CicadaFlux/ModelSaves/Rs_mod1x.rda")
+
+# ##// Uncomment to view model summaries and plots 
+# summary(Rs_mod1x, prob = 0.94)
+# bayes_R2(Rs_mod1x, prob = c(0.03, 0.97))
+# plot_model(Rs_mod1x, type = "pred", terms = c("Week", "Symbiont"), show.data = TRUE) + 
+#  theme_bw()
+# 
+# ##//Post-hoc hypothesis testing
+# HypRs_mod1 = hypothesis(
+#   Rs_mod1x,
+#   hypothesis = c("Intercept = Intercept + SymbiontECM"))
+# HypRs_mod1
+# 
+# ##//Post hoc tests
+# #get the adjusted means
+# (Rs_mod1x_em <- emmeans(Rs_mod1x,  ~ Week))
+# 
+# 
+# #get all possible contrasts
+# (cont <- contrast(Rs_mod1x_em, "tukey"))
+
+##//Hole density model
+##//Site set as random effect
+##//Number of cicada holes a factor effect
+
+# ##//Making sure that the holes are a factor variable
+# Rs_plots$n_holes_f <- as.factor(Rs_plots$n_holes)
+# ##//Full Models
+# Rs_mod3x <- brm(
+#     Corr_LinFlux ~ n_holes_f * Symbiont + (1|Site),
+#     data = Rs_plots[Rs_plots$Corr_LinFlux<=6,],
+#     prior = my.prior,
+#     family =  "normal",
+#     seed = 12345,
+#     iter = 2000,
+#     chains = 4,
+#     cores = 4,
+#     control = list(adapt_delta = 0.90, max_treedepth = 15))
+# 
+# ##//Once you run the model you can save model outputs reducing complication time
+# ##//Update directory to locations where you want to store model runs
+# save(Rs_mod3x, file = "D:/Dropbox/Projects/Indiana/Data/CicadaFlux/ModelSaves/Rs_mod3x.rda")
+# 
+# ##//Load prior model runs
+# ##//Update directory to locations where you  to store model runs
+# load("D:/Dropbox/Projects/Indiana/Data/CicadaFlux/ModelSaves/Rs_mod3x.rda")
+# 
+# ##// Uncomment to view model summaries and plots 
+# summary(Rs_mod3x, prob = 0.94)
+# bayes_R2(Rs_mod3x, prob = c(0.03, 0.97))
+# plot_model(Rs_mod3x, type = "pred", terms = c("n_holes_f", "Symbiont"), show.data = TRUE) +
+#   theme_bw()
+# 
+# ##//Post hoc tests
+# ###//Get the adjusted means
+# (HypRs_mod3x_em <- emmeans (Rs_mod3,  ~ Symbiont | n_holes_f))
+# 
+# #get all possible contrasts
+# (cont <- contrast(HypRs_mod3x_em, "tukey"))
+# 
+# ##//Getting inverse contrasts
+# (HypRs_mod3x_em <- emmeans (Rs_mod3x,  ~ n_holes_f | Symbiont))
+# 
+# ##// Get all possible contrasts
+# (cont <- contrast(HypRs_mod3x_em, "tukey"))
+# 
+# ##// Get the posterior draws from the contrasts
+# cont_posterior <- gather_emmeans_draws(cont)
+# 
+# ###//Effects plotted
+# ggplot(cont_posterior,
+#        aes(y = contrast, x = .value, fill = Symbiont  , group = Symbiont)) +
+#   geom_halfeyeh(alpha = 0.5)+
+#   geom_vline(xintercept = 0, color = "red", lty = 2)
+# 
+# emmip(Rs_mod3x, ~ n_holes_f | Symbiont, CIs = TRUE, cov.reduce = range)
+
+
+##//Rs fungi holes plot
+##//Figure 3
+Rs_Sym_plot3 <- ggplot() +
+  geom_violin(data = Rs_plots[Rs_plots$Corr_LinFlux<=6,],
+               aes(x = as.factor(n_holes), y = Corr_LinFlux, fill = Symbiont), color = "black", 
+               show.legend = TRUE,  size = 1, alpha = 0.4, position = position_dodge(0.8), 
+               trim=T) +
+    geom_boxplot(data = Rs_plots[Rs_plots$Corr_LinFlux<=6,],
+               aes(x = as.factor(n_holes), y = Corr_LinFlux, fill = Symbiont), color = "black", 
+               show.legend = TRUE,  size = 1.5, alpha = 0.25, position = position_dodge(0.8),
+               notch = F, notchwidth = 0.95) +
+  
+  scale_color_manual(values = c("#4D54E8", "#ECC01D", "#A2A197"))+ 
+  scale_fill_manual(values = c("#4D54E8", "#ECC01D", "#A2A197"))+ 
+  xlab('Number of Holes') +
+  # ylab(expression(paste("Soil Efflux  [", mu, "mol CO" [2], " m"^2, "  s "^-1, "] "  ))) +
+  ylab(expression(paste("R" ["S"] , " [",mu, "mol " , " CO" ["2"], "  m"^"-2 ", "s"^"-1", "]"))) +
+  #annotate("text", x = as.factor(Rs_plots$n_holes[2]), y = 5, label = "a)    ", size = 20) +
+  theme(legend.position="top",
+        axis.text=element_text(size=30),
+        axis.title=element_text(size=30),
+        legend.title=element_text("Species",size=30),
+        legend.text=element_text(size=30))
+Rs_Sym_plot3 
+
+
+#################################################################
+##//Using the chamber observations to develop a scaler to interpolate fluxes across the landscape
+##//AM and EcM Scaler calculations
+##//Zero holes
+AM_0 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Corr_LinFlux<=6 & Rs_plots$Symbiont=="AM" & Rs_plots$n_holes==0])
+ECM_0 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Corr_LinFlux<=6 & Rs_plots$Symbiont=="ECM" & Rs_plots$n_holes==0])
+##//One hole 
+AM_1 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Corr_LinFlux<=6 & Rs_plots$Symbiont=="AM" & Rs_plots$n_holes==1])
+ECM_1 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Corr_LinFlux<=6 & Rs_plots$Symbiont=="ECM" & Rs_plots$n_holes==1])
+##//Two holes
+AM_2 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Corr_LinFlux<=6 & Rs_plots$Symbiont=="AM" & Rs_plots$n_holes==2])
+ECM_2 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Corr_LinFlux<=6 & Rs_plots$Symbiont=="ECM" & Rs_plots$n_holes==2])
+
+##//No fungal types
+All_0 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Corr_LinFlux<=6 & Rs_plots$n_holes==0])
+All_1 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Corr_LinFlux<=6 & Rs_plots$n_holes==1])
+All_2 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Corr_LinFlux<=6 & Rs_plots$n_holes==2])
+
+
+
+
+##//All fungal types
+AM <- median(Rs_plots$Corr_LinFlux[Rs_plots$Corr_LinFlux<=6 & Rs_plots$Symbiont=="AM"])
+ECM <- median(Rs_plots$Corr_LinFlux[Rs_plots$Corr_LinFlux<=6 & Rs_plots$Symbiont=="ECM"])
+
+##//Fungal pct differences
+Fun_Pdiff_1 <- abs(AM_0 - ECM_0) / ((AM_0 + ECM_0) / 2) * 100
+
+##//AM Pct diff
+AM_Pdiff_1 <- abs(AM_0 - AM_1) / ((AM_0 + AM_1) / 2) * 100
+AM_Pdiff_2 <- abs(AM_1 - AM_2) / ((AM_1 + AM_2) / 2) * 100
+AM_Pdiff_2x <- abs(AM_0 - AM_2) / ((AM_0 + AM_2) / 2) * 100
+
+##//EcM Pct diff
+EcM_Pdiff_1 <- abs(ECM_0 - ECM_1) / ((ECM_0 + ECM_1) / 2) * 100
+EcM_Pdiff_2 <- abs(ECM_1 - ECM_2) / ((ECM_1 + ECM_2) / 2) * 100
+EcM_Pdiff_2x <- abs(ECM_0 - ECM_2) / ((ECM_0 + ECM_2) / 2) * 100
+
+###//percent gains based on the scaled fluxes 1 hole ~ 123 holes per m2
+##                                            2 holes ~ 246 holes per m2
+AM_1_scaler <- AM_Pdiff_1 / 123
+AM_2_scaler <- AM_Pdiff_2 / 246
+
+EcM_1_scaler <- EcM_Pdiff_1 / 123
+EcM_2_scaler <- EcM_Pdiff_2 / 246
+
+##//Average of the 1 and 2 hole estimates
+##//Represents the CO2 increase per cicada hole
+AM_scaler <- (AM_1_scaler + AM_2_scaler) / 2 
+EcM_scaler <- (EcM_1_scaler + EcM_2_scaler) / 2
+
+```
+*Figure 3:* Soil respiration for cicada holes (**a)**) and seasonal trends (**b)**) with respect to the fungal type 
+
+
+```{r fig.asp = 0.8, fig.width = 15, echo=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+####///This section corresponds to the chamber Rs-Temp, and q10 models
+
+##//Summarize data for each day and treatment
+Rs_plots_sum2 <- Rs_plots %>%
+  dplyr::group_by(Date, Pair, Hole_Collar, Symbiont) %>%
+  dplyr::summarise_if(is.numeric, median, na.rm = TRUE) %>%  
+  na.omit
+
+##//General exponential equation
+formula <- bf(
+  Corr_LinFlux ~ asym * exp(scale * SoilT_C),
+  scale ~ 1,
+  asym ~ 1,
+  sigma ~ 1,
+  nl = TRUE)
+
+# quick and dirty priors. you need priors to even fit a model
+##//Prior must be positive
+prior1 <- c(
+  prior(normal(0.2, 1), nlpar = "asym"),
+  prior(normal(0.0699, 1), nlpar = "scale"))
+
+##//Distribution of data for fluxes in collars without holes
+# hist(log(Rs_plots_sum2$Corr_LinFlux[Rs_plots_sum2$Hole_Collar==0]))
+
+# ##//Model of no hole fluxes 
+# fit_nohole2x <- brm(
+#   formula,
+#   data = Rs_plots_sum2[Rs_plots_sum2$Hole_Collar==0,],
+#   prior = prior1,
+#   family =  "normal",
+#   seed = 12345,
+#   iter = 8000,
+#   chains = 4,
+#   cores = 4,
+#   control = list(adapt_delta = 0.92, max_treedepth = 15))
+
+# ##//Once you run the model you can save model outputs reducing complication time
+# ##//Update directory to locations where you want to store model runs
+# save(fit_nohole2x, file = "D:/Dropbox/Projects/Indiana/Data/CicadaFlux/ModelSaves/fit_nohole2x.rda")
+
+# ##//Load prior model runs
+# ##//Update directory to locations where you  to store model runs
+load(paste(dirname(rstudioapi::getActiveDocumentContext()$path), 
+                           "fit_nohole2x.rda", sep = "/"))
+# 
+##// Uncomment to view model summaries and plots 
+# summary(fit_nohole2x, prob = 0.89)
+
+##//Calculate Q10 from posterior draws
+fit_noholex_ex2 <- prepare_predictions(fit_nohole2x)
+survey_noholex_q102 <- exp(10 * fit_noholex_ex2$nlpars$scale$fe$b)
+median(survey_noholex_q102)
+
+##//Distribution of fluxes corresponding to 1 cicada hole
+# hist(Rs_plots_sum2$Corr_LinFlux[Rs_plots_sum2$Hole_Collar==1])
+
+# ##//Model of 1 hole fluxes 
+# fit_hole2x <- brm(
+#   formula,
+#   data = Rs_plots_sum2[Rs_plots_sum2$Hole_Collar==1,],
+#   prior = prior1,
+#   family =  "normal",
+#   seed = 12345,
+#   iter = 80000,
+#   chains = 4,
+#   cores = 4,
+#   control = list(adapt_delta = 0.90, max_treedepth = 15))
+
+# ##//Once you run the model you can save model outputs reducing complication time
+# ##//Update directory to locations where you want to store model runs
+# save(fit_hole2x, file = "D:/Dropbox/Projects/Indiana/Data/CicadaFlux/ModelSaves/fit_hole2x.rda")
+
+# ##//Load prior model runs
+# ##//Update directory to locations where you  to store model runs
+load(paste(dirname(rstudioapi::getActiveDocumentContext()$path), 
+                           "fit_hole2x.rda", sep = "/"))
+
+##// Uncomment to view model summaries and plots 
+# summary(fit_hole2x, prob = 0.89)
+
+##//Calculate Q10
+fit_holex_ex2 <- prepare_predictions(fit_hole2x)
+survey_holex_q102 <- exp(10 * fit_holex_ex2$nlpars$scale$fe$b)
+median(survey_holex_q102)
+
+###//New data for model predictions
+new.data <- data.frame(SoilT_C = seq(min(Rs_plots$SoilT_C, na.rm = TRUE), 
+                                     max(Rs_plots$SoilT_C, na.rm = TRUE), 
+                                     length = 100))
+
+##//Prediction Dataframes
+##//Holes
+holesx_pred2 <- predict(fit_hole2x, newdata = new.data, probs = c(0.055, 0.945))
+holesx_pred2_df <- as.data.frame(holesx_pred2)
+holesx_pred2_df <-  cbind(holesx_pred2_df, new.data$SoilT_C); names(holesx_pred2_df)[5] <- "SoilT_C"
+##//No Holes
+nholesx_pred2 <- predict(fit_nohole2x, newdata = new.data, probs = c(0.055, 0.945))
+nholesx_pred2_df <- as.data.frame(nholesx_pred2)
+nholesx_pred2_df <-  cbind(nholesx_pred2_df, new.data$SoilT_C); names(nholesx_pred2_df)[5] <- "SoilT_C"
+
+
+##//Color ramps
+myGray_1 <- grey.colors(4, start = 0.1, end = 0.9, gamma = 2.2, rev = FALSE)
+cicadaColors <- c( "#191919", "#943b37" , "#fc0d03")
+
+##//Manuscript plot 4
+###//Plots a
+Rs_Ts_all <- ggplot() +
+  geom_ribbon(data = holesx_pred2_df, aes(x = SoilT_C, ymin = Q5.5, ymax = Q94.5), fill = cicadaColors[2],
+              alpha = 0.1) +
+  geom_line(data = holesx_pred2_df, aes(x = SoilT_C, y = Estimate), color = cicadaColors[2], size = 5) +
+  geom_ribbon(data = nholesx_pred2_df, aes(x = SoilT_C, ymin = Q5.5, ymax = Q94.5), fill =  cicadaColors[1],
+              alpha = 0.1) +
+  geom_line(data = nholesx_pred2_df, aes(x = SoilT_C, y = Estimate), color =  cicadaColors[1], size = 5) +
+  geom_point(data = Rs_plots_sum2, aes(x = SoilT_C, y = Corr_LinFlux, color = as.factor(Hole_Collar), 
+                                       shape =  as.factor(Hole_Collar)),
+             show.legend = TRUE,  size = 5) +
+  scale_color_manual(values = cicadaColors)+ 
+  scale_fill_manual(values = cicadaColors)+ 
+  xlab("Soil Temperature [C]") +
+  ylab(expression(paste("R" ["S"] , " [",mu, "mol " , " CO" ["2"], "  m"^"-2 ", "s"^"-1", "]"))) +
+  annotate("text", x = 16, y = 5, label = "a)    ", size = 20) +
+  annotate("text", x = 16.5, y = 4, label = "No Holes", size = 13) +
+  annotate("text", x = 16.5, y = 3.5, label = "Holes     ", size = 13) +
+  geom_point(aes(x = 15.2, y = 4), shape = 16, color = cicadaColors[1], size = 7) +
+  geom_point(aes(x = 15.2, y = 3.5), shape = 17, color = cicadaColors[2], size = 7) +
+  geom_point(aes(x = 15.2, y = 4), shape = "_", color = cicadaColors[1], size = 20) +
+  geom_point(aes(x = 15.2, y = 3.5), shape = "_", color = cicadaColors[2], size = 20) +
+  
+  theme(legend.position = "NA",
+        axis.text=element_text(size=30),
+        axis.title=element_text(size=30),
+        legend.title=element_text("Species",size=30),
+        legend.text=element_text(size=30))
+Rs_Ts_all
+
+##//Q10 dataframe
+Hole_data <- data.frame(Treatment = "Holes",
+                     Q10 = sample(survey_holex_q102, size = 1000, replace = FALSE))
+NoHole_data <- data.frame(Treatment = "No Holes",
+                     Q10 = sample(survey_noholex_q102, size = 1000, replace = FALSE))
+
+##//Combined
+Q10_data <- rbind(Hole_data, NoHole_data)
+Q10_data$Treatment <- as.factor(Q10_data$Treatment)
+
+# ##//Are holes and no holes different
+# my.prior <- set_prior("uniform(-30000,30000)", class = "b")
+# ##//Model
+# Q10_mod1x <- brm(
+#     Q10 ~ Treatment,
+#     data = Q10_data,
+#     prior = my.prior,
+#     family =  "normal",
+#     seed = 12345,
+#     iter = 2000,
+#     chains = 4,
+#     # cores = 4,
+#     control = list(adapt_delta = 0.90, max_treedepth = 15))
+
+# ##//Once you run the model you can save model outputs reducing complication time
+# ##//Update directory to locations where you want to store model runs
+# save(Q10_mod1x, file = "D:/Dropbox/Projects/Indiana/Data/CicadaFlux/ModelSaves/Q10_mod1x.rda")
+
+# ##//Load prior model runs
+# ##//Update directory to locations where you  to store model runs
+load(paste(dirname(rstudioapi::getActiveDocumentContext()$path), 
+                           "Q10_mod1x.rda", sep = "/"))
+
+
+##// Uncomment to view model summaries and plots 
+# summary(Q10_mod1x)
+
+# ##//Test posteriors
+# hypQ10 = hypothesis(
+#   Q10_mod1x,
+#   hypothesis = c(
+#     "Intercept = Intercept + TreatmentNoHoles"))
+# hypQ10
+
+##//Q10 plot
+Q10Plot <- ggplot() +
+
+  geom_violin(data = Q10_data, aes(y = Q10, x = Treatment, fill = Treatment), color = "black",
+               show.legend = TRUE, trim = T, size = 1, alpha = 0.8) +
+    geom_boxplot(data = Q10_data, aes(y = Q10, x = Treatment, fill = Treatment), color = "black",
+               show.legend = TRUE,  size = 1.5, notch = F, notchwidth = 0.95,
+               width = 0.5, alpha = 0.25) +
+  xlab('Treatment') +
+  ylab(expression(paste("R" ["S "],  "  Q" ["10 "] ))) +
+    annotate("text", x = Q10_data$Treatment[1], y = 6, label = "b)             ", size = 20) +
+  scale_color_manual(values = c( "#943b37" , "#191919")) +
+  scale_fill_manual(values = c( "#943b37" , "#191919")) + 
+  theme(legend.position= "NA",
+        axis.text=element_text(size=30),
+        axis.title=element_text(size=40),
+        legend.title=element_text("Treatment",size=30),
+        legend.text=element_text(size=30))
+
+Q10Plot
+
+# grid.arrange(
+#   Rs_Ts_all,
+#   Q10Plot,
+#   ncol = 1,
+#   nrow = 2,
+#   # widths = c(3, 3),
+#   # heights = c(3),
+#   clip = FALSE
+# )
+
+##//NOTE: For the manuscript the figures were combined in inkscape
+
+##//Percent Diff Q10
+Hole_Q10 <- median(Q10_data$Q10[Q10_data$Treatment=="Holes"])
+NoHole_Q10 <- median(Q10_data$Q10[Q10_data$Treatment=="No Holes"])
+
+##//Q10 Pct diff
+(Q10_Pdiff <- abs(Hole_Q10 - NoHole_Q10) / ((Hole_Q10 + NoHole_Q10) / 2) * 100)
+
+"13% difference in Q10"
+
+```
+ 
+*Figure* The  soil temperature effects soil respiration (**a)**) for collars containing cicada holes (Blue) and no cicada holes (burgundy). Collars containing cicada holes are more sensitive to soil temperature (**b)**) as soil Q10  was significantly different between the two treatments.
+  
+## Spatially scaling of soil respiration and cicada emergence
+
+#####             Region of interest: 
+
+    
+
+```{r fig.asp = 0.8, fig.width = 15, echo=FALSE}
+
+##//Quick comparison if fungal cohorts influence cicada densities and site
+##//Uniformed prior
+my.prior <- set_prior("uniform(-30000,30000)", class = "b")
+
+##//The number of different species are represented at the different sites
+length(unique(meholes$Species[meholes$Site=="GW"]))
+length(unique(meholes$Species[meholes$Site=="MMSF"]))
+length(unique(meholes$Species[meholes$Site=="KF"]))
+
+##//Modeling the relationship between hole counts and fungal types by site
+# holes_Mod <- brm(
+#     Holes_mx ~ Fungi_Type*Site,
+#     data = meholes,
+#     prior = my.prior,
+#     family = negbinomial(link = "log", link_shape = "log"),
+#     seed = 12345,
+#     iter = 10000,
+#     chains = 4,
+#     cores = 4,
+#     save_pars = save_pars(all = TRUE),
+#     control = list(adapt_delta = 0.90, max_treedepth = 15))
+# summary(holes_Mod, prob = 0.89)
+# plot_model(holes_Mod, type = "pred", terms = c("Fungi_Type", "Site"), show.data = TRUE) +
+#   theme_bw()
+# save(holes_Mod, file = "D:/Dropbox/Projects/Indiana/Data/CicadaFlux/ModelSaves/holes_Mod.rda")
+
+
+```
+
+
+
+```{r fig.asp = 0.8, fig.width = 15, echo=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+
+##//Characterizing the spatial variability of cicada holes and fluxes across the square transect
+#################################################################################################
+
+###// Scalers based on fungal types
+AM_scaler
+EcM_scaler
+
+##//Converting holes to numeric
+MMSF_pheno@data$Holes_mx <- as.numeric(as.character(MMSF_pheno@data$Holes_mx))
+MMSF_pheno@data$Holes_mx_m2 <- MMSF_pheno@data$Holes_mx * 4 
+
+##//Updating data classes
+MMSF_pheno@data$Species <- as.factor(as.character(MMSF_pheno@data$Species))
+MMSF_pheno@data$Fungi_Type <- as.factor(as.character(MMSF_pheno@data$Fungi_Type))
+MMSF_pheno@data$Fungi_Type_Scale[MMSF_pheno@data$Fungi_Type=="AM"] <- AM_scaler
+MMSF_pheno@data$Fungi_Type_Scale[MMSF_pheno@data$Fungi_Type=="EcM"] <- EcM_scaler
+
+##//Removing zero cicada hole measurements
+MMSF_pheno@data$Holes_mx_m2_nzinf <- ifelse(MMSF_pheno@data$Holes_mx_m2==0, NA, MMSF_pheno@data$Holes_mx_m2) 
+
+##//Inverse distance weighted plots
+P <- MMSF_pheno
+W <- MMSF_pheno_bound
+
+##//Update bounding box
+P@bbox <- W@bbox
+
+##//Create an empty grid where n is the total number of cells
+grd              <- as.data.frame(spsample(P, "regular", n=500000))
+names(grd)       <- c("X", "Y")
+coordinates(grd) <- c("X", "Y")
+gridded(grd)     <- TRUE  # Create SpatialPixel object
+fullgrid(grd)    <- TRUE  # Create SpatialGrid object
+
+##//Add P's projection information to the empty grid
+proj4string(P) <- proj4string(P) # Temp fix until new proj env is adopted
+proj4string(grd) <- proj4string(P)
+
+###//Interpolate fungi groups across the grid cells
+P.idw <- gstat::idw(Fungi_Type_Scale ~ 1, P, newdata=grd, idp = 5)
+
+###//Convert to raster object then clip to boundary
+r <- raster(P.idw)
+r_fungi <- r
+r.m  <- mask(r, W)
+r_fungi <- r.m
+
+##//Supplemental Figure 3b
+##//Plot
+tm_shape(r_fungi) + 
+  tm_raster(n=8, palette = topo.colors(2), auto.palette.mapping = T,
+            title="AM and EcM Scaler") + 
+  tm_shape(P) + tm_dots(size=1.2, col = "grey") +
+  #legend.outside.size(5)+
+  tm_legend(legend.outside=TRUE)
+
+###//Cicada hole density
+##############################################################################################
+##//Interpolate the grid cells 
+P.idw <- gstat::idw(Holes_mx_m2 ~ 1, P, newdata=grd, na.action = na.omit, idp = 8)
+#P.idw <- gstat::idw(Symbiont ~ 1, P, newdata=grd, idp=4.0)
+
+###//Convert to raster object then clip to boundary
+r <- raster(P.idw)
+r_holes <- r
+r.m <- mask(r, W)
+r_holes <- r.m
+
+##//Supplemental Figure 3a
+##//Plot
+
+tm_shape(r_holes) + 
+  tm_raster(n = 50, palette = heat.colors(10), auto.palette.mapping = FALSE,
+            title="Cicada Hole per m2") + 
+  tm_shape(P) + tm_dots(size=1.2, col = "grey") +
+  tm_legend(legend.outside=TRUE)
+
+
+##//Figure S3c
+##//Scaler derived from the interaction between soil microbial groups and cicada hole density
+model_scales <- r_fungi * r_holes 
+
+##//Distribution of scalers across the landscape
+hist(model_scales@data@values, na.rm = T)
+
+############################
+##//Making spatail data into dataframe
+df <- data.frame(
+  Scaler = model_scales@data@values)
+
+# Histogram with density plot
+ggplot() + 
+  geom_histogram(data = df, aes(x = Scaler), colour="black", fill="white", bins = 12) +
+  geom_vline(data = df, aes(xintercept=median(Scaler, na.rm = T)),
+             color="blue", linetype=1, size = 3, alpha = 0.9) +
+  ylab("Frequency") +
+  xlab("Soil Efflux Scaler") +
+  theme(legend.position="top",
+        axis.text=element_text(size=30),
+        axis.title=element_text(size=30),
+        legend.title=element_text("Species",size=30),
+        legend.text=element_text(size=30))
+
+
+###//These figures were combined and had scales adjusted in inkscape
+
+
+```
+
+
+```{r fig.asp = 0.8, fig.width = 15, echo=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+##//This section used to assess the ecosystem effects of cicada emergence on RECO
+
+##//Getting me some packages
+##//Package management
+library(bigleaf)
+library(tidybayes)
+library(rstan)
+library(brms)
+library(modelr)
+library(sjPlot)
+library(sjstats)
+library(RColorBrewer)
+library(lubridate)
+library(readxl)
+library(tidyverse)
+library(hutils)
+library(dplyr)
+library(plyr)
+library(tidyr)
+library(tidyselect)
+library(stringr)
+library(matrixStats)
+library(knitr)
+library(car)
+library(corrplot)
+library(hysteresis)
+library(gridExtra)
+library(ggpubr)
+library(TreeDep)
+library(emmeans)
+
+theme_set(theme_minimal())
+GoAvsGo <- c("#6F263D", "#236192", "#A2AAAD", "#000000")
+
+##//Grab micromet data from AmeriFlux website
+"https://ameriflux.lbl.gov/sites/siteinfo/US-MMS"
+#//Download the US-MMS Base version (CC-BY-4.0) containing data hourly fluxes and meteorological variables
+##//Once downloaded unzip the folder in the working directory
+##//Note the data you download will contain more data than used in the manuscript as data is updated quarterly
+
+
+
+##//This is only an example the data file name may change based on when data is downloaded!!!!!!!!!!
+##//This same syntax is presented in the data management section b
+# AmeriFlux_File <- paste(dirname(rstudioapi::getActiveDocumentContext()$path), 
+#                         "AMF_US-MMS_BASE-BADM_21-5/AMF_US-MMS_BASE_HR_21-5.csv" , sep = "/")
+# dat_46m <- read.csv(AmeriFlux_File, 
+#                     skip = 2, na.strings = -9999)
+
+
+# ##//AmeriFlux download for local machine linked to my personal dropbox
+# ##//Update teh file path to match local pathways
+AmeriFlux_File <- "D:/Dropbox/Projects/Indiana/Data/CicadaFlux/AMF_US-MMS_BASE-BADM_21-5/AMF_US-MMS_BASE_HR_21-5.csv"
+dat_46m <- read.csv(AmeriFlux_File,
+                    skip = 2, na.strings = -9999)
+
+##//Updating the timestamps from AmeriFlux formats
+dat_46m$TIMESTAMP_END2 <- dat_46m$TIMESTAMP_END * 100
+dat_46m$TIMESTAMP <- ymd_hms(dat_46m$TIMESTAMP_END2, tz = "EST")
+
+##//Make if posixct
+dat_46m$TIMESTAMP_ct <- as.POSIXct(strptime(dat_46m$TIMESTAMP, "%Y-%m-%d %H:%M:%S"))
+
+##//Convert to Hours 
+dat_46m$Hours <- strptime(substr(dat_46m$TIMESTAMP_ct, 12, 16), "%H:%M")
+
+##//Subsetting data into pre and cicada years
+##//Precicada2 data represents the 16 years prior to cicada emergence in 2021
+PreCicada2 <- dat_46m[dat_46m$TIMESTAMP_ct>"2005-01-01 00:00:00 EST" & dat_46m$TIMESTAMP_ct<"2021-01-01 00:00:00 EST",]
+##//Precicada data represents the 10 years prior to cicada emergence in 2021
+PreCicada <- dat_46m[dat_46m$TIMESTAMP_ct>"2011-01-01 00:00:00 EST" & dat_46m$TIMESTAMP_ct<"2021-01-01 00:00:00 EST",]
+##//Cicada data from 2021
+Cicada <- dat_46m[dat_46m$TIMESTAMP_ct>"2021-01-01 00:00:00 EST" & dat_46m$TIMESTAMP_ct<"2022-01-01 00:00:00 EST",]
+##//Cicada data from 2004
+Cicada_04 <- dat_46m[dat_46m$TIMESTAMP_ct>"2004-01-01 00:00:00 EST" & dat_46m$TIMESTAMP_ct<"2005-01-01 00:00:00 EST",]
+
+###//New day of year vector
+PreCicada$doy <- as.numeric(strftime(PreCicada$TIMESTAMP_ct, format = "%j"))
+PreCicada2$doy <- as.numeric(strftime(PreCicada2$TIMESTAMP_ct, format = "%j"))
+Cicada$doy <- as.numeric(strftime(Cicada$TIMESTAMP_ct, format = "%j"))
+Cicada_04$doy <- as.numeric(strftime(Cicada_04$TIMESTAMP_ct, format = "%j"))
+
+##//QAQC filter using nighttime data (ie PPFD<5), appropriate u* metrics, removing extreme observations
+cc <- PreCicada$FC_1_1_1> -50 & PreCicada$FC_1_1_1< 50 & PreCicada$USTAR_1_1_1>0.29 & PreCicada$PPFD_IN_1_1_1<5
+##//Summarizing the data
+d_pre = PreCicada[cc,] %>%
+  dplyr::group_by(doy) %>%
+  dplyr::summarise_if(is.numeric, median, na.rm=T) 
+
+##//QAQC filter using nighttime data (ie PPFD<5), appropriate u* metrics, removing extreme observations
+cc <- PreCicada2$FC_1_1_1> -50 & PreCicada2$FC_1_1_1< 50 & PreCicada2$USTAR_1_1_1>0.29 & PreCicada2$PPFD_IN_1_1_1<5
+##//Summarizing the data
+d_pre2 = PreCicada2[cc,] %>%
+  dplyr::group_by(doy) %>%
+  dplyr::summarise_if(is.numeric, median, na.rm=T) 
+
+
+##//QAQC filter using nighttime data (ie PPFD<5), appropriate u* metrics, removing extreme observations
+cc <- Cicada$FC_1_1_1> -50 & Cicada$FC_1_1_1< 50 & Cicada$USTAR_1_1_1>0.29 & Cicada$PPFD_IN_1_1_1<5
+##//Summarizing the data
+d_cicada = Cicada[cc,] %>%
+  dplyr::group_by(doy) %>%
+  dplyr::summarise_if(is.numeric, median, na.rm=T) 
+
+##//QAQC filter using nighttime data (ie PPFD<5), appropriate u* metrics, removing extreme observations
+cc <- Cicada_04$FC_1_1_1> -50 & Cicada_04$FC_1_1_1< 50 & Cicada_04$USTAR_1_1_1>0.29 & Cicada_04$PPFD_IN_1_1_1<5
+##//Summarizing the data
+d_cicada_04 = Cicada_04[cc,] %>%
+  dplyr::group_by(doy) %>%
+  dplyr::summarise_if(is.numeric, median, na.rm=T) 
+
+##//Growing degree days
+predays <- unique(PreCicada2$doy)
+for(i in 2:length(predays)){ 
+PreCicada2$DDG <- ((min(PreCicada2$TA_1_1_1[PreCicada2$doy==predays[i]], na.rm = T) + 
+                  max(PreCicada2$TA_1_1_1[PreCicada2$doy==predays[i]], na.rm = T)) / 2) - 7 
+
+}
+
+##//Summary data frames for plotting fluxes 
+##//QAQC filter using nighttime data (ie PPFD<5), appropriate u* metrics, removing extreme observations
+cc <- Cicada$FC_1_1_1> -50 & Cicada$FC_1_1_1< 50 & Cicada$USTAR_1_1_1>0.29 & Cicada$PPFD_IN_1_1_1<5
+##//Summarizing dataframes
+Cicada_sumz = Cicada[cc,]  %>% 
+  dplyr::group_by(doy)  %>% 
+  dplyr::summarize(FC_Std_21 = sd(FC_1_1_1, na.rm = T), 
+                   FC_Md_21 = median(FC_1_1_1, na.rm = T),
+                   ST_Std_21 = sd(TS_2_1_1, na.rm = T), 
+                   ST_Md_21 = median(TS_2_1_1, na.rm = T)  )
+
+##//New vectors for the upper and lower bounds of variation in both fluxes and soil temp
+Cicada_sumz$FC_UVar_21 <- Cicada_sumz$FC_Md_21 + Cicada_sumz$FC_Std_21
+Cicada_sumz$FC_LVar_21 <- Cicada_sumz$FC_Md_21 - Cicada_sumz$FC_Std_21
+
+Cicada_sumz$ST_UVar_21 <- Cicada_sumz$ST_Md_21 + Cicada_sumz$ST_Std_21
+Cicada_sumz$ST_LVar_21 <- Cicada_sumz$ST_Md_21 - Cicada_sumz$ST_Std_21
+
+##//QAQC filter using nighttime data (ie PPFD<5), appropriate u* metrics, removing extreme observations
+cc <- Cicada_04$FC_1_1_1> -50 & Cicada_04$FC_1_1_1< 50 & Cicada_04$USTAR_1_1_1>0.29 & Cicada_04$PPFD_IN_1_1_1<5
+##//Summarizing dataframes
+Cicada_04_sumz = Cicada_04[cc,]  %>% 
+  dplyr::group_by(doy)  %>% 
+  dplyr::summarize(FC_Std_04 = sd(FC_1_1_1, na.rm = T), 
+                   FC_Md_04 = median(FC_1_1_1, na.rm = T),
+                   ST_Std_04 = sd(TS_2_1_1, na.rm = T), 
+                   ST_Md_04 = median(TS_2_1_1, na.rm = T)  )
+
+##//New vectors for the upper and lower bounds of variation in both fluxes and soil temp
+Cicada_04_sumz$FC_UVar_04 <- Cicada_04_sumz$FC_Md_04 + Cicada_04_sumz$FC_Std_04
+Cicada_04_sumz$FC_LVar_04 <- Cicada_04_sumz$FC_Md_04 - Cicada_04_sumz$FC_Std_04
+
+Cicada_04_sumz$ST_UVar_04 <- Cicada_04_sumz$ST_Md_04 + Cicada_04_sumz$ST_Std_04
+Cicada_04_sumz$ST_LVar_04 <- Cicada_04_sumz$ST_Md_04 - Cicada_04_sumz$ST_Std_04
+
+
+##//QAQC filter using nighttime data (ie PPFD<5), appropriate u* metrics, removing extreme observations
+cc <- PreCicada$FC_1_1_1> -50 & PreCicada$FC_1_1_1< 50 & PreCicada$USTAR_1_1_1>0.29 & PreCicada$PPFD_IN_1_1_1<5
+##//Summarizing dataframes
+PreCicada_sumz = PreCicada[cc,]  %>% 
+  dplyr::group_by(doy)  %>% 
+  dplyr::summarize(FC_Std_10y = sd(FC_1_1_1, na.rm = T), 
+                   FC_Md_10y = median(FC_1_1_1, na.rm = T),
+                   ST_Std_10y = sd(TS_2_1_1, na.rm = T), 
+                   ST_Md_10y = median(TS_2_1_1, na.rm = T)  )
+
+##//New vectors for the upper and lower bounds of variation in both fluxes and soil temp
+PreCicada_sumz$FC_UVar_10y <- PreCicada_sumz$FC_Md_10y + PreCicada_sumz$FC_Std_10y
+PreCicada_sumz$FC_LVar_10y <- PreCicada_sumz$FC_Md_10y - PreCicada_sumz$FC_Std_10y
+
+PreCicada_sumz$ST_UVar_10y <- PreCicada_sumz$ST_Md_10y + PreCicada_sumz$ST_Std_10y
+PreCicada_sumz$ST_LVar_10y <- PreCicada_sumz$ST_Md_10y - PreCicada_sumz$ST_Std_10y
+
+##//QAQC filter using nighttime data (ie PPFD<5), appropriate u* metrics, removing extreme observations
+cc <- PreCicada2$FC_1_1_1> -50 & PreCicada2$FC_1_1_1< 50 & PreCicada2$USTAR_1_1_1>0.29 & PreCicada2$PPFD_IN_1_1_1<5
+##//Summarizing dataframes##//QAQC filter using nighttime data (ie PPFD<5), appropriate u* metrics, removing extreme observations
+PreCicada2_sumz = PreCicada2[cc,]  %>% 
+  dplyr::group_by(doy)  %>% 
+  dplyr::summarize(FC_Std_15y = sd(FC_1_1_1, na.rm = T), 
+                   FC_Md_15y = median(FC_1_1_1, na.rm = T),
+                   ST_Std_15y = sd(TS_2_1_1, na.rm = T), 
+                   ST_Md_15y = median(TS_2_1_1, na.rm = T)  )
+
+##//New vectors for the upper and lower bounds of variation in both fluxes and soil temp
+PreCicada2_sumz$FC_UVar_15y <- PreCicada2_sumz$FC_Md_15y + PreCicada2_sumz$FC_Std_15y
+PreCicada2_sumz$FC_LVar_15y <- PreCicada2_sumz$FC_Md_15y - PreCicada2_sumz$FC_Std_15y
+
+PreCicada2_sumz$ST_UVar_15y <- PreCicada2_sumz$ST_Md_15y + PreCicada2_sumz$ST_Std_15y
+PreCicada2_sumz$ST_LVar_15y <- PreCicada2_sumz$ST_Md_15y - PreCicada2_sumz$ST_Std_15y
+
+
+##// Eddy Flux figures
+##// Day in which soil temperature reaches 68 F
+##// Days that soil temperatures reached trigger temperature (~17-18 C) iniating cicada emergence 
+TriggerAVG <- mean(PreCicada2_sumz$doy[PreCicada2_sumz$doy<200 & PreCicada2_sumz$ST_Md_15y>17.5  & PreCicada2_sumz$ST_Md_15y<18], na.rm = T)
+Trigger04 <- 162
+Trigger21 <- 144
+
+
+##//Figure 5
+ggplot() +
+  geom_ribbon(data = PreCicada2_sumz, aes(x = doy, ymin = FC_LVar_15y, ymax = FC_UVar_15y),
+              fill = "grey70", alpha = 0.4) + 
+
+  geom_line(data = PreCicada2_sumz, aes(x = doy, y = FC_Md_15y),
+            color = "black", size = 2, linetype = 1, alpha = 0.2) +
+  geom_line(data = Cicada_sumz, aes(x = doy, y = FC_Md_21), color = "darkred",
+            size = 1) +
+  # 
+  geom_line(data = Cicada_04_sumz, aes(x = doy, y = FC_Md_04), color = "red",
+            size = 1) +
+  
+  geom_vline(xintercept = TriggerAVG, col = "black", linetype = 4, size = 2, alpha = 0.3) +
+  geom_vline(xintercept = Trigger04, col = "red", linetype = 2, size = 2, alpha = 0.4) +
+  geom_vline(xintercept = Trigger21, col = "darkred", linetype = 2, size = 2, alpha = 0.4) +
+  
+
+  xlab(expression(paste("Day of Year"))) +
+  ylab(expression(paste("R" ["ECO"] , " [",mu, "mol " , " CO" ["2"], "  m"^"-2 ", "s"^"-1", "]"))) +
+  ylim(-05,12)+
+  xlim(0,200)+
+  annotate("text", x = 80, y = -3, label = "2005-2020", color =  "grey70", size = 20) +
+  annotate("text", x = 100, y = 7.5, label = "2021", color =  "darkred", size = 20) +
+  annotate("text", x = 50, y = 5.5, label = "2004", color =  "red", size = 20) +
+  theme(legend.position = "NA",
+        axis.text=element_text(size=30),
+        axis.title=element_text(size=30),
+        legend.title=element_text("Species", size=30),
+        legend.text=element_text(size=30)) 
+
+##//Re joining data frames
+Cicada_Comps <- inner_join(Cicada_sumz,  PreCicada_sumz, by = "doy")
+Cicada_Comps2 <- inner_join(Cicada_Comps,  Cicada_04_sumz, by = "doy")
+Cicada_Comps2 <- inner_join(Cicada_Comps2,  PreCicada2_sumz, by = "doy")
+
+##//Dataframe for comparing mean and cicada years
+comp_data <- rbind(data.frame(Treatment = "PreCicada_16Y",
+                              Flux = Cicada_Comps2$FC_Md_15y[Cicada_Comps2$doy>50 & Cicada_Comps2$doy<200],
+                              SoilT = Cicada_Comps2$ST_Md_15y[Cicada_Comps2$doy>50 & Cicada_Comps2$doy<200]),
+
+                   data.frame(Treatment = "Cicada_21",
+                              Flux = Cicada_Comps2$FC_Md_21[Cicada_Comps2$doy>50 & Cicada_Comps2$doy<200],
+                              SoilT = Cicada_Comps2$ST_Md_21[Cicada_Comps2$doy>50 & Cicada_Comps2$doy<200]),
+                   data.frame(Treatment = "Cicada_04",
+                              Flux = Cicada_Comps2$FC_Md_04[Cicada_Comps2$doy>50 & Cicada_Comps2$doy<200],
+                              SoilT = Cicada_Comps2$ST_Md_04[Cicada_Comps2$doy>50 & Cicada_Comps2$doy<200]))
+
+
+##//Model for testing differences between years
+
+##//Uniformed Prior
+my.prior <- set_prior("uniform(-30000,30000)", class = "b")
+# Reco_mod1 <- brm(
+#   Flux ~ Treatment,
+#     data = comp_data,
+#     prior = my.prior,
+#     family =  "normal",
+#     seed = 12345,
+#     iter = 2000,
+#     chains = 4,
+#     cores = 4,
+#     control = list(adapt_delta = 0.90, max_treedepth = 15))
+
+##//Once you run the model you can save model outputs reducing complication time
+##//Update directory to locations where you want to store model runs
+# save(Reco_mod1, file = "D:/Dropbox/Projects/Indiana/Data/CicadaFlux/ModelSaves/Reco_mod1.rda")
+
+##//Load prior model runs
+##//Update directory to locations where you  to store model runs
+load(paste(dirname(rstudioapi::getActiveDocumentContext()$path), 
+                           "Reco_mod1.rda", sep = "/"))
+# 
+# 
+# ##//Uncomment to print summaries and plots
+# summary(Reco_mod1, prob = 0.94)
+# bayes_R2(Reco_mod1, prob = c(0.03, 0.97))
+
+##//Post hoc tests
+##//get the adjusted means
+# Reco_mod1_em <- emmeans (Reco_mod1,  ~ Treatment)
+# Reco_mod1_em
+# 
+# ##//get all possible contrasts
+# (cont <- contrast(Reco_mod1_em, "tukey"))
+# 
+# ##//get the posterior draws from the contrasts
+# cont_posterior <- gather_emmeans_draws(cont)
+# 
+# ##//plot
+# ggplot(cont_posterior,
+#        aes(y = contrast, x = .value)) +
+#   geom_halfeyeh() +
+#   geom_vline(xintercept = 0, color = "red", lty = 2)
+
+##//Figure 6
+##Next question: How about the Respiration sensitivity to temperature at the ecosystem scale
+ggplot() +
+  geom_ribbon(data = PreCicada_sumz, aes(x = ST_Md_10y , ymin = FC_LVar_10y, ymax = FC_UVar_10y), fill = "grey70") + 
+  geom_point(data = PreCicada_sumz, aes(x = ST_Md_10y , y = FC_Md_10y), color = "black") + 
+  geom_point(data = Cicada_sumz, aes(x = ST_Md_21, y = FC_Md_21), color = "darkred", 
+            size = 2) +
+  geom_point(data = Cicada_04_sumz, aes(x = ST_Md_04, y = FC_Md_04), color = "blue", 
+             size = 2) +
+  geom_vline(xintercept = 149, col = "black", linetype = 2, size = 2) +
+  geom_vline(xintercept = 144, col = "red", linetype = 2, size = 2) +
+  
+  xlab(expression(paste("Soil Temperature [C]"))) +
+  ylab(expression(paste("R" ["ECO"] , " [",mu, "mol " , " CO" ["2"], "  m"^"-2 ", "s"^"-1", "]"))) +
+  ylim(-0,12)+
+  xlim(0, 25)+
+  annotate("text", x = 80, y = -3, label = "2011-2020", color =  "grey70", size = 20) +
+  annotate("text", x = 100, y = 7.5, label = "2021", color =  "darkred", size = 20) +
+  
+  #annotate("text", x = 3.5, y = 10.5, label = "camera", size = 10) +
+  theme(legend.position = "NA",
+        axis.text=element_text(size=30),
+        axis.title=element_text(size=30),
+        legend.title=element_text("Species", size=30),
+        legend.text=element_text(size=30)) 
+
+
+##//Q10 models
+##//16 year data set
+##//Model function (updated with year syntax)
+formula <- bf(
+  FC_Md_15y ~ asym * exp(scale * ST_Md_15y),
+  scale ~ 1,
+  asym ~ 1,
+  sigma ~ 1,
+  nl = TRUE)
+
+##//quick and dirty priors. you need priors to even fit a model
+##//Prior must be positive
+prior1 <- c(
+  prior(normal(0.2, 1), nlpar = "asym"),
+  # the population average slope is constrained to be positive
+  prior(normal(0.0699, 1), nlpar = "scale"))
+
+##//Filtering for spring and early summer pulling out unrealistic values
+# cc <- PreCicada2_sumz$doy>50 & PreCicada2_sumz$doy<200 & PreCicada2_sumz$FC_Md_15y>0 & PreCicada2_sumz$ST_Md_15y<23
+# fit_PreCicada_16y <- brm(
+#   formula,
+#   data = PreCicada2_sumz[cc,],
+#   prior = prior1,
+#   family =  "lognormal",
+#   seed = 12345,
+#   iter = 10000,
+#   chains = 3,
+#   #cores = 4,
+#   control = list(adapt_delta = 0.90, max_treedepth = 15))
+
+##//Once you run the model you can save model outputs reducing complication time
+##//Update directory to locations where you want to store model runs
+# save(fit_PreCicada_16y, file = "D:/Dropbox/Projects/Indiana/Data/CicadaFlux/ModelSaves/fit_PreCicada_16y.rda")
+
+##//Load prior model runs
+##//Update directory to locations where you  to store model runs
+load(paste(dirname(rstudioapi::getActiveDocumentContext()$path), 
+                           "fit_PreCicada_16y.rda", sep = "/"))
+# 
+##//Uncomment to print summaries and plots
+# summary(fit_PreCicada_16y, prob = 0.89)
+# bayes_R2(fit_PreCicada_16y, prob = c(0.055, 0.89))
+# plot_model(fit_PreCicada_16y, type = "pred", terms = c("ST_Md_15y"), show.data = TRUE) + 
+#   theme_bw()
+
+##//2021 model
+##//Model function (updated with year syntax)
+formula <- bf(
+  FC_Md_21 ~ asym * exp(scale * ST_Md_21),
+  scale ~ 1,
+  asym ~ 1,
+  sigma ~ 1,
+  nl = TRUE)
+
+##//quick and dirty priors. you need priors to even fit a model
+##//Prior must be positive
+prior1 <- c(
+  prior(normal(0.2, 1), nlpar = "asym"),
+  # the population average slope is constrained to be positive
+  prior(normal(0.0699, 1), nlpar = "scale"))
+
+##//Filtering for spring and early summer pulling out unrealistic values
+# cc <- Cicada_sumz$doy>50 & Cicada_sumz$doy<200 & Cicada_sumz$FC_Md_21>0
+
+# fit_Cicada_21 <- brm(
+#   formula,
+#   data = Cicada_sumz[cc,],
+#   prior = prior1,
+#   family =  "lognormal",
+#   seed = 12345,
+#   iter = 10000,
+#   chains = 3,
+#   #cores = 4,
+#   control = list(adapt_delta = 0.90, max_treedepth = 15))
+
+##//Once you run the model you can save model outputs reducing complication time
+##//Update directory to locations where you want to store model runs
+# save(fit_Cicada_21, file = "D:/Dropbox/Projects/Indiana/Data/CicadaFlux/ModelSaves/fit_Cicada_21_RECO.rda")
+
+##//Load prior model runs
+##//Update directory to locations where you  to store model runs
+load(paste(dirname(rstudioapi::getActiveDocumentContext()$path), 
+                           "fit_Cicada_21_RECO.rda", sep = "/"))
+
+##//Uncomment to print summaries and plots
+# summary(fit_Cicada_21, prob = 0.89)
+# bayes_R2(fit_Cicada_21, prob = c(0.055, 0.89))
+# plot_model(fit_Cicada_21, type = "pred", terms = c("ST_Md_21"), show.data = TRUE) + 
+#   theme_bw()
+
+##//2004 model
+##//Model function (updated with year syntax)
+formula <- bf(
+  FC_Md_04 ~ asym * exp(scale * ST_Md_04),
+  scale ~ 1,
+  asym ~ 1,
+  sigma ~ 1,
+  nl = TRUE)
+
+##//quick and dirty priors. you need priors to even fit a model
+##//Prior must be positive
+prior1 <- c(
+  prior(normal(0.2, 1), nlpar = "asym"),
+  # the population average slope is constrained to be positive
+  prior(normal(0.0699, 1), nlpar = "scale"))
+
+##//Filtering for spring and early summer pulling out unrealistic values
+cc <- Cicada_04_sumz$doy>50 & Cicada_04_sumz$doy<200 & Cicada_04_sumz$FC_Md_04>0
+
+# fit_Cicada_04 <- brm(
+#   formula,
+#   data = Cicada_04_sumz[cc,],
+#   prior = prior1,
+#   family =  "lognormal",
+#   seed = 12345,
+#   iter = 10000,
+#   chains = 3,
+#   #cores = 4,
+#   control = list(adapt_delta = 0.90, max_treedepth = 15))
+
+##//Once you run the model you can save model outputs reducing complication time
+##//Update directory to locations where you want to store model runs
+# save(fit_Cicada_04, file = "D:/Dropbox/Projects/Indiana/Data/CicadaFlux/ModelSaves/fit_Cicada_04_RECO.rda")
+
+##//Load prior model runs
+##//Update directory to locations where you  to store model runs
+load(paste(dirname(rstudioapi::getActiveDocumentContext()$path), 
+                           "fit_Cicada_04_RECO.rda", sep = "/"))
+
+##//Uncomment to print summaries and plots
+# summary(fit_Cicada_04, prob = 0.89)
+# bayes_R2(fit_Cicada_04, prob = c(0.055, 0.89))
+# plot_model(fit_Cicada_04, type = "pred", terms = c("ST_Md_04"), show.data = TRUE) + 
+#   theme_bw()
+
+
+##//Calculate Q10
+fit_cicada_21_ex <- prepare_predictions(fit_Cicada_21)
+EC_cicada_21_q10 <- exp(10 * fit_cicada_21_ex$nlpars$scale$fe$b)
+
+fit_cicada_04_ex <- prepare_predictions(fit_Cicada_04)
+EC_cicada_04_q10 <- exp(10 * fit_cicada_04_ex$nlpars$scale$fe$b)
+
+fit_Precicada_16_ex <- prepare_predictions(fit_PreCicada_16y)
+EC_Precicada_16_q10 <- exp(10 * fit_Precicada_16_ex$nlpars$scale$fe$b)
+
+##///Compile back into dataframe
+EC_Q10_d <- rbind(data.frame(Treatment = "16 Yr Avg",
+                             Q10 = sample(EC_Precicada_16_q10, size = 2000)),
+                  data.frame(Treatment = "2021",
+                             Q10 = sample(EC_cicada_21_q10, size = 2000)),
+                  data.frame(Treatment = "2004",
+                             Q10 = sample(EC_cicada_04_q10, size = 2000)))
+##//Correcting Vector names
+names(EC_Q10_d)[2] <- "Q10"
+
+##//Plot the results excluding 10 year 
+ggplot() +
+  geom_violin(data = EC_Q10_d,
+              aes(y = Q10, x = Treatment, fill = Treatment), color = "black",
+               show.legend = TRUE, trim = T, size = 1, alpha = 0.7) +
+  geom_boxplot(data = EC_Q10_d[EC_Q10_d$Treatment!="10 Yr Avg",], 
+               aes(y = Q10, x = Treatment, fill = Treatment), color = "black",
+              show.legend = FALSE,  size = 1.5, alpha = 0.1, varwidth = 0.1) +
+  
+  xlab('') +
+  ylab(expression(paste("R" ["ECO "],  "Q" ["10 "] ))) +
+  scale_fill_manual(values =  c("#191919", "#fc0d03", "#943b37")) + 
+  theme(legend.position= "NA",
+        axis.text=element_text(size=30),
+        axis.title=element_text(size=40),
+        legend.title=element_text("Treatment",size=30),
+        legend.text=element_text(size=30))
+
+##//general summary of q10 data
+EC_Q10_sum = EC_Q10_d %>%
+  dplyr::group_by(Treatment) %>%
+  dplyr::summarise_if(is.numeric, median, na.rm=T) 
+
+(abs(2.86-3.85) / ((2.86+3.85)/2) )*100
+##//2004 29.5082 % increase in Q10 relative to 16 year average 
+(abs(2.86-3.57) / ((2.86+3.57)/2) )*100
+##//2021 22.08398 % increase in Q10 relative to 16 year average
+
+##//Are Q10s different
+##//Uniformed prior
+# my.prior <- set_prior("uniform(-30000,30000)", class = "b")
+##//Model
+# Q10_mod2 <- brm(
+#     Q10 ~ Treatment,
+#     data = EC_Q10_d,
+#     prior = my.prior,
+#     family =  "normal",
+#     seed = 12345,
+#     iter = 2000,
+#     chains = 4,
+#     # cores = 4,
+#     control = list(adapt_delta = 0.90, max_treedepth = 15))
+
+##//Once you run the model you can save model outputs reducing complication time
+##//Update directory to locations where you want to store model runs
+# save(Q10_mod2, file = "D:/Dropbox/Projects/Indiana/Data/CicadaFlux/ModelSaves/Q10_mod2_all.rda")
+
+##//Load prior model runs
+##//Update directory to locations where you  to store model runs
+load(paste(dirname(rstudioapi::getActiveDocumentContext()$path), 
+                           "Q10_mod2_all.rda", sep = "/"))
+
+summary(Q10_mod2)
+
+##//Post hoc tests
+#get the adjusted means
+Q10_mod2_em <- emmeans (Q10_mod2,  ~ Treatment)
+Q10_mod2_em
+
+#get all possible contrasts
+(cont <- contrast(Q10_mod2_em, "tukey"))
+
+###//get the posterior draws from the contrasts
+cont_posterior <- gather_emmeans_draws(cont)
+
+##//plot
+ggplot(cont_posterior,
+       aes(y = contrast, x = .value)) +
+  geom_halfeyeh() +
+  geom_vline(xintercept = 0, color = "red", lty = 2)
+
+
+##//Degree growing day calculations between the cicada years
+
+##//Degree growing days in 2021 
+names(Cicada)
+d_cicada_GDD = Cicada %>%
+  dplyr::group_by(doy) %>%
+  dplyr::summarise(Min_TA = min(TA_1_1_1 , na.rm = TRUE),
+                   Max_TA = max(TA_1_1_1 , na.rm = TRUE),
+                   Min_TS = min(TS_2_1_1 , na.rm = TRUE),
+                   Max_TS = max(TS_2_1_1 , na.rm = TRUE),
+                   n = n()) %>%
+  as.data.frame()
+
+d_cicada_GDD$GDD <- ((d_cicada_GDD$Max_TA + d_cicada_GDD$Min_TA ) / 2) - 7 
+d_cicada_GDD$Soil_GDD <- ((d_cicada_GDD$Max_TS + d_cicada_GDD$Min_TS ) / 2) - 7 
+
+##//Degree growing days in 2004 
+d_cicada_04_GDD = Cicada_04 %>%
+  dplyr::group_by(doy) %>%
+  dplyr::summarise(Min_TA = min(TA_1_1_1 , na.rm = TRUE),
+                   Max_TA = max(TA_1_1_1 , na.rm = TRUE),
+                   Min_TS = min(TS_2_1_1 , na.rm = TRUE),
+                   Max_TS = max(TS_2_1_1 , na.rm = TRUE),
+                   n = n()) %>%
+  as.data.frame()
+
+d_cicada_04_GDD$GDD <- ((d_cicada_04_GDD$Max_TA + d_cicada_04_GDD$Min_TA ) / 2) - 7 
+d_cicada_04_GDD$Soil_GDD <- ((d_cicada_04_GDD$Max_TS + d_cicada_04_GDD$Min_TS ) / 2) - 7 
+
+##//Winter air AGDD 
+ggplot() +
+
+  geom_line(data = d_cicada_GDD[d_cicada_GDD$doy<80,], 
+            aes(x = doy, y = cumsum(GDD)), color = "darkred",
+            size = 4) +
+  geom_line(data = d_cicada_04_GDD[d_cicada_04_GDD$doy<80,], 
+            aes(x = doy, y = cumsum(GDD)), color = "red",
+            size = 4) +
+  xlab(expression(paste("Day of Year"))) +
+  ylab(expression(paste("Accumulated Growing Degree Days [Air Temp]"))) +
+  ylim(-550,5)+
+  xlim(0,80)+
+# 
+#   annotate("text", x = 100, y = 7.5, label = "2021", color =  "darkred", size = 20) +
+#   annotate("text", x = 50, y = 5.5, label = "2004", color =  "red", size = 20) +
+  theme(legend.position = "NA",
+        axis.text=element_text(size=30),
+        axis.title=element_text(size=30),
+        legend.title=element_text("Species", size=30),
+        legend.text=element_text(size=30)) 
+
+
+##//Winter soil AGDD 
+ggplot() +
+  
+  geom_line(data = d_cicada_GDD[d_cicada_GDD$doy<80,],
+            aes(x = doy, y = cumsum(Soil_GDD)), color = "darkred",
+            size = 4) +
+  geom_line(data = d_cicada_04_GDD[d_cicada_04_GDD$doy<80,],
+            aes(x = doy, y = cumsum(Soil_GDD)), color = "red",
+            size = 4) +
+  xlab(expression(paste("Day of Year"))) +
+  ylab(expression(paste("Accumulated Growing Degree Days [Soil Temp]"))) +
+  ylim(-350,5)+
+  xlim(0,80)+
+  # 
+  # annotate("text", x = 100, y = 7.5, label = "2021", color =  "darkred", size = 20) +
+  # annotate("text", x = 50, y = 5.5, label = "2004", color =  "red", size = 20) +
+  theme(legend.position = "NA",
+        axis.text=element_text(size=30),
+        axis.title=element_text(size=30),
+        legend.title=element_text("Species", size=30),
+        legend.text=element_text(size=30)) 
+
+
+##//Summer air AGDD 
+ggplot() +
+  
+  geom_line(data = d_cicada_GDD[d_cicada_GDD$doy>100 & d_cicada_GDD$doy<170,],
+            aes(x = doy, y = cumsum(GDD)), color = "darkred",
+            size = 4) +
+  geom_line(data = d_cicada_04_GDD[d_cicada_04_GDD$doy>100 & d_cicada_04_GDD$doy<170,],
+  aes(x = doy, y = cumsum(GDD)), color = "red",
+            size = 4) +
+  xlab(expression(paste("Day of Year"))) +
+  ylab(expression(paste("Accumulated Growing Degree Days [Air Temp]"))) +
+    annotate("text", x = 120, y = 400, label = "2021", color =  "darkred", size = 20) +
+    annotate("text", x = 120, y = 600, label = "2004", color =  "red", size = 20) +
+  theme(legend.position = "NA",
+        axis.text=element_text(size=30),
+        axis.title=element_text(size=30),
+        legend.title=element_text("Species", size=30),
+        legend.text=element_text(size=30)) 
+
+
+##//Summer soil AGDD 
+ggplot() +
+  
+  geom_line(data = d_cicada_GDD[d_cicada_GDD$doy>100 & d_cicada_GDD$doy<170,],
+            aes(x = doy, y = cumsum(Soil_GDD)), color = "darkred",
+            size = 4) +
+  geom_line(data = d_cicada_04_GDD[d_cicada_04_GDD$doy>100 & d_cicada_04_GDD$doy<170,],
+            aes(x = doy, y = cumsum(Soil_GDD)), color = "red",
+            size = 4) +
+  xlab(expression(paste("Day of Year"))) +
+  ylab(expression(paste("Accumulated Growing Degree Days [Soil Temp]"))) +
+  annotate("text", x = 120, y = 280, label = "2021", color =  "darkred", size = 20) +
+  annotate("text", x = 120, y = 400, label = "2004", color =  "red", size = 20) +
+  theme(legend.position = "NA",
+        axis.text=element_text(size=30),
+        axis.title=element_text(size=30),
+        legend.title=element_text("Species", size=30),
+        legend.text=element_text(size=30)) 
+
+
+
+
+```
+
+
