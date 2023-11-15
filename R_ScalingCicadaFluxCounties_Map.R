@@ -12,7 +12,6 @@ require(gstat) #//Kriging Tools (ArcGIS Geospatial Statistics toolbox)
 require(glmulti) #// General linear model tools
 require(leaps) #//Linear Model Tools
 require(geoR) #//
-# devtools::install_version("sf", version = "1.0.8")
 library(sf) # Simple Features for R
 library(rnaturalearth) # World Map Data from Natural Earth
 library(here) # A Simpler Way to Find Your Files
@@ -35,10 +34,22 @@ cicadaColors <- c( "#191919", "#943b37" , "#fc0d03")
 ##//  This analysis will use the mean, lower quantile (25) and upper quantile (75) estimates 
 
 ##//After downloading .img files in working directories and update data pathways
-SoilFlux <- read_stars("D:/Dropbox/Projects/Indiana/Data/CicadaFlux/GIS/CMS_Global_Soil_Respiration_1736/CMS_Global_Soil_Respiration_1736/data/Clipped_soil_respiration_mean_eastern_US.img")
-SoilFlux_25 <- read_stars("D:/Dropbox/Projects/Indiana/Data/CicadaFlux/GIS/CMS_Global_Soil_Respiration_1736/CMS_Global_Soil_Respiration_1736/data/Clipped_soil_respiration_Q25_eastern_US.img")
-SoilFlux_75 <- read_stars("D:/Dropbox/Projects/Indiana/Data/CicadaFlux/GIS/CMS_Global_Soil_Respiration_1736/CMS_Global_Soil_Respiration_1736/data/Clipped_soil_respiration_Q75_eastern_US.img")
+# ####//Global respiration estimates 
+# ##//Soil respiration rasters are obstained from Global Gridded 1-km Annual Soil Respiration and Uncertainty Derived from SRDB V3
+# "https://daac.ornl.gov/CMS/guides/CMS_Global_Soil_Respiration.html"
+##//Download data move .img files to a common working directory
+##//  This analysis will use the mean, lower quantile (25) and upper quantile (75) estimates
 
+##//After downloading .img files in working directories and update data pathways
+SoilFlux <- read_stars( paste(dirname(rstudioapi::getActiveDocumentContext()$path),
+  "CMS_Global_Soil_Respiration_1736/CMS_Global_Soil_Respiration_1736/data/Clipped_soil_respiration_mean_eastern_US.img",
+  sep = "/"))
+SoilFlux_25 <- read_stars(paste(dirname(rstudioapi::getActiveDocumentContext()$path),
+  "CMS_Global_Soil_Respiration_1736/CMS_Global_Soil_Respiration_1736/data/Clipped_soil_respiration_Q25_eastern_US.img",
+  sep = "/"))
+SoilFlux_75 <- read_stars(paste(dirname(rstudioapi::getActiveDocumentContext()$path),
+  "/CMS_Global_Soil_Respiration_1736/CMS_Global_Soil_Respiration_1736/data/Clipped_soil_respiration_Q75_eastern_US.img",
+  sep = "/"))
 ##//Updating CRS
 SoilFlux2 <- SoilFlux %>%
   st_transform("+proj=moll")
@@ -49,29 +60,16 @@ SoilFlux_252 <- SoilFlux_25 %>%
 SoilFlux_752 <- SoilFlux_75 %>%
   st_transform("+proj=moll")
 
-#//World map for reference
-worldmap <- ne_countries(scale = "small", returnclass = "sf")
-
-##//Build maps
-mesoam <- worldmap %>%
-  filter(region_wb == "North America") %>%
-  dplyr::select(admin) %>%
-  st_transform("+init=epsg:4326")
-
 ##// Active cicada broods shapefiles "https://data.fs.usda.gov/geodata/edw/datasets.php?xmlKeyword=cicada"
 ##  download shapefiles, move files to working directory, and update pathways
-cicadapolys <- st_read("D:/Dropbox/Projects/Indiana/Data/CicadaFlux/GIS/CicadaCounties.shp")
-county_polys <- cicadapolys %>% st_transform("+proj=moll")
 
-##//Data frame with estimates of forest
-cicadaForestpolys <- st_read("D:/Dropbox/Projects/Indiana/Data/CicadaFlux/GIS/Counties_cicadas_forest_prop_shapefile/Counties_cicadas_forest_prop_shapefile/Counties_cicadas_forest_prop.shp")
+##//Shapefile and Data frame with estimates of forest
+cicadaForestpolys <- st_read(paste(dirname(rstudioapi::getActiveDocumentContext()$path), 
+                                   "Counties_cicadas_forest_prop.shp", 
+                                   sep = "/"))
 cicadaForest_polys <- cicadaForestpolys %>% st_transform("+proj=moll")
+# cicadaForest_polys <- county_polys
 
-##//State outlines
-##//Generic state shapefile (https://lehd.ces.census.gov/data/schema/latest/lehd_shapefiles.html)
-##  download shapefiles, move files to working directory, and update pathways
-statepolys <- st_read("D:/Dropbox/Projects/Indiana/Data/GIS/tl_2021_us_state/tl_2021_us_state.shp")
-state_polys <- statepolys %>% st_transform("+proj=moll")
 
 ##//Clipping fluxes to forested county area
 Cicada_county <- st_crop(SoilFlux2, cicadaForest_polys)

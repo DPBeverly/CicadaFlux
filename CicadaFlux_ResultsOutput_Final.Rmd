@@ -95,17 +95,17 @@ getwd()
 # dirname(rstudioapi::getActiveDocumentContext()$path)
 
 ##//Define the DOI for the Zenodo record you want to download data from
-doi <- "10.5281/zenodo.10125404" 
+doi <- "10.5281/zenodo.8431547" 
 
 dir(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 ##//Download data from Zenodo
-# CicadaData <- download_zenodo(
-#   doi,
-#   path = dirname(rstudioapi::getActiveDocumentContext()$path),
-#   files = list(),
-#   logger = NULL,
-#   quiet = FALSE)
+CicadaData <- download_zenodo(
+  doi,
+  path = dirname(rstudioapi::getActiveDocumentContext()$path),
+  files = list(),
+  logger = NULL,
+  quiet = FALSE)
 
 ##//Check to make sure the data files have been downloaded to the correct directory
 dir(dirname(rstudioapi::getActiveDocumentContext()$path))
@@ -155,29 +155,28 @@ AmeriFlux_File <- paste(dirname(rstudioapi::getActiveDocumentContext()$path),
 dat_46m <- read.csv(AmeriFlux_File, 
                     skip = 2, na.strings = -9999)
 
-# ####//Global respiration estimates 
-# ##//Soil respiration rasters are obstained from Global Gridded 1-km Annual Soil Respiration and Uncertainty Derived from SRDB V3
-# "https://daac.ornl.gov/CMS/guides/CMS_Global_Soil_Respiration.html"
-# ##//Download data move .img files to a common working directory
-# ##//  This analysis will use the mean, lower quantile (25) and upper quantile (75) estimates 
-# 
-# ##//After downloading .img files in working directories and update data pathways
-# SoilFlux <- read_stars( paste(dirname(rstudioapi::getActiveDocumentContext()$path), 
-#   "CMS_Global_Soil_Respiration_1736/CMS_Global_Soil_Respiration_1736/data/Clipped_soil_respiration_mean_eastern_US.img",
-#   sep = "/")) 
-# SoilFlux_25 <- read_stars(paste(dirname(rstudioapi::getActiveDocumentContext()$path),
-#   "CMS_Global_Soil_Respiration_1736/CMS_Global_Soil_Respiration_1736/data/Clipped_soil_respiration_Q25_eastern_US.img",
-#   sep = "/"))
-# SoilFlux_75 <- read_stars(paste(dirname(rstudioapi::getActiveDocumentContext()$path),
-#   "/CMS_Global_Soil_Respiration_1736/CMS_Global_Soil_Respiration_1736/data/Clipped_soil_respiration_Q75_eastern_US.img", 
-#   sep = "/"))
-# 
-# 
-# ##// Active cicada broods shapefiles "https://data.fs.usda.gov/geodata/edw/datasets.php?xmlKeyword=cicada"
-# ##  download shapefiles, move files to working directory, and update pathways
-# cicadapolys <- st_read(paste(dirname(rstudioapi::getActiveDocumentContext()$path), 
-#                               "CicadaCounties.shp", sep = "/"))
+####//Global respiration estimates
+##//Soil respiration rasters are obstained from Global Gridded 1-km Annual Soil Respiration and Uncertainty Derived from SRDB V3
+"https://daac.ornl.gov/CMS/guides/CMS_Global_Soil_Respiration.html"
+##//Download data move .img files to a common working directory
+##//  This analysis will use the mean, lower quantile (25) and upper quantile (75) estimates
 
+##//After downloading .img files in working directories and update data pathways
+SoilFlux <- read_stars( paste(dirname(rstudioapi::getActiveDocumentContext()$path),
+  "CMS_Global_Soil_Respiration_1736/CMS_Global_Soil_Respiration_1736/data/Clipped_soil_respiration_mean_eastern_US.img",
+  sep = "/"))
+SoilFlux_25 <- read_stars(paste(dirname(rstudioapi::getActiveDocumentContext()$path),
+  "CMS_Global_Soil_Respiration_1736/CMS_Global_Soil_Respiration_1736/data/Clipped_soil_respiration_Q25_eastern_US.img",
+  sep = "/"))
+SoilFlux_75 <- read_stars(paste(dirname(rstudioapi::getActiveDocumentContext()$path),
+  "/CMS_Global_Soil_Respiration_1736/CMS_Global_Soil_Respiration_1736/data/Clipped_soil_respiration_Q75_eastern_US.img",
+  sep = "/"))
+
+# ##// Active cicada broods shapefiles "https://data.fs.usda.gov/geodata/edw/datasets.php?xmlKeyword=cicada"
+##//Shapefile and Data frame with estimates of forest
+cicadaForestpolys <- st_read(paste(dirname(rstudioapi::getActiveDocumentContext()$path), 
+                                   "Counties_cicadas_forest_prop.shp", 
+                                   sep = "/"))
 ##//Optional data product for making the maps but not used in the R code
 # ##//State outlines
 # ##//Generic state shapefile (https://lehd.ces.census.gov/data/schema/latest/lehd_shapefiles.html)
@@ -211,7 +210,7 @@ Rs_plots$Week <- result$cut_POSIXt
 
 ##//Timeseries plot of soil temperature across all weeks of measurement
 Ts_Timex <- ggplot() +
-  geom_boxplot(data = Rs_plots[Rs_plots$Corr_LinFlux<=6,],
+  geom_boxplot(data = Rs_plots,
                aes(x = Week, y = SoilT_C), color = "black", 
                show.legend = TRUE,  size = 1, alpha = 0.4, 
                notch = F, notchwidth = 0.5) +
@@ -227,7 +226,7 @@ Ts_Timex
 
 ##//Timeseries plot of soil moisture across all weeks of measurement
 VWC_Timex <- ggplot() +
-  geom_boxplot(data = Rs_plots[Rs_plots$Corr_LinFlux<=6,],
+  geom_boxplot(data = Rs_plots,
                aes(x = Week, y = SoilVWC_pct), color = "black", 
                show.legend = TRUE,  size = 1, alpha = 0.4, 
                notch = F, notchwidth = 0.5) +
@@ -244,7 +243,7 @@ VWC_Timex
 
 ##//Timeseries plot of soil efflux across all weeks of measurement
 Flux_Time <- ggplot() +
-  geom_boxplot(data = Rs_plots[Rs_plots$Corr_LinFlux<=6,],
+  geom_boxplot(data = Rs_plots,
                aes(x = Week, y = Corr_LinFlux), color = "black", 
                show.legend = TRUE,  size = 1, alpha = 0.4, 
                notch = F, notchwidth = 0.5) +
@@ -324,7 +323,7 @@ ggplot() +
 ##///Temperature over time model
 # TS_mod1x <- brm(
 #     SoilT_C ~ Week,
-#     data = Rs_plots[Rs_plots$Corr_LinFlux<=6,],
+#     data = Rs_plots,
 #     prior = my.prior,
 #     family =  "normal",
 #     seed = 12345, 
@@ -343,7 +342,7 @@ ggplot() +
 
 ##// Uncomment to view model summaries and plots 
 # summary(TS_mod1x, prob = 0.89)
-# bayes_R2(TS_mod1x, prob = c(0.03, 0.97))
+# bayes_R2(TS_mod1x, prob = c(0.055, 0.945))
 # plot_model(TS_mod1x, type = "pred", terms = c("Week"), show.data = TRUE) +
 #   theme_bw()
 
@@ -351,7 +350,7 @@ ggplot() +
 ##///Soil Moisture over time model
 # SM_mod1x <- brm(
 #     SoilVWC_pct ~ Week,
-#     data = Rs_plots[Rs_plots$Corr_LinFlux<=6,],
+#     data = Rs_plots,
 #     prior = my.prior,
 #     family =  "normal",
 #     seed = 12345,
@@ -370,7 +369,7 @@ ggplot() +
 # 
 # ##// Uncomment to view model summaries and plots 
 # summary(SM_mod1x, prob = 0.89)
-# bayes_R2(SM_mod1x, prob = c(0.03, 0.97))
+# bayes_R2(SM_mod1x, prob = c(0.055, 0.945))
 
 #############################################################################
 #//Are one vs 2 vs 3 holes different
@@ -381,7 +380,7 @@ ggplot() +
 # ##///Temperature over time with respect to number of cicada holes model
 # TS_mod2x <- brm(
 #     SoilT_C ~ Week + Hole_Collarf,
-#     data = Rs_plots[Rs_plots$Corr_LinFlux<=6,],
+#     data = Rs_plots,
 #     prior = my.prior,
 #     family =  "normal",
 #     seed = 12345,
@@ -400,7 +399,7 @@ ggplot() +
 # 
 # ##// Uncomment to view model summaries and plots 
 # summary(TS_mod2x, prob = 0.89)
-# bayes_R2(TS_mod2x, prob = c(0.03, 0.97))
+# bayes_R2(TS_mod2x, prob = c(0.055, 0.945))
 # plot_model(TS_mod2x, type = "pred", terms = c("Week", "Hole_Collarf"), show.data = TRUE) +
 #   theme_bw()
 # 
@@ -415,7 +414,7 @@ ggplot() +
 ##///Soil Moisture over time with respect to number of cicada holes model
 # SM_mod2x <- brm(
 #     SoilVWC_pct ~ Week + Hole_Collarf,
-#     data = Rs_plots[Rs_plots$Corr_LinFlux<=6,],
+#     data = Rs_plots,
 #     prior = my.prior,
 #     family =  "normal",
 #     seed = 12345,
@@ -434,7 +433,7 @@ ggplot() +
 # 
 # ##// Uncomment to view model summaries and plots 
 # summary(SM_mod2x, prob = 0.89)
-# bayes_R2(SM_mod2x, prob = c(0.03, 0.97))
+# bayes_R2(SM_mod2x, prob = c(0.055, 0.945))
 # plot_model(SM_mod2x, type = "pred", terms = c("Week", "Hole_Collarf"), show.data = TRUE) +
 #   theme_bw()
 # 
@@ -455,7 +454,7 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 ##//Site is set as random effect 
 # Rs_mod1x <- brm(
 #     Corr_LinFlux ~ Week + Symbiont + (1|Site),
-#     data = Rs_plots[Rs_plots$Corr_LinFlux<=6,],
+#     data = Rs_plots,
 #     prior = my.prior,
 #     family =  "normal",
 #     seed = 12345,
@@ -473,8 +472,8 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 # load("D:/Dropbox/Projects/Indiana/Data/CicadaFlux/ModelSaves/Rs_mod1x.rda")
 
 # ##// Uncomment to view model summaries and plots 
-# summary(Rs_mod1x, prob = 0.94)
-# bayes_R2(Rs_mod1x, prob = c(0.03, 0.97))
+# summary(Rs_mod1x, prob = 0.89)
+# bayes_R2(Rs_mod1x, prob = c(0.055, 0.945))
 # plot_model(Rs_mod1x, type = "pred", terms = c("Week", "Symbiont"), show.data = TRUE) + 
 #  theme_bw()
 # 
@@ -501,7 +500,7 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 # ##//Full Models
 # Rs_mod3x <- brm(
 #     Corr_LinFlux ~ n_holes_f * Symbiont + (1|Site),
-#     data = Rs_plots[Rs_plots$Corr_LinFlux<=6,],
+#     data = Rs_plots,
 #     prior = my.prior,
 #     family =  "normal",
 #     seed = 12345,
@@ -519,8 +518,8 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 # load("D:/Dropbox/Projects/Indiana/Data/CicadaFlux/ModelSaves/Rs_mod3x.rda")
 # 
 # ##// Uncomment to view model summaries and plots 
-# summary(Rs_mod3x, prob = 0.94)
-# bayes_R2(Rs_mod3x, prob = c(0.03, 0.97))
+# summary(Rs_mod3x, prob = 0.89)
+# bayes_R2(Rs_mod3x, prob = c(0.055, 0.945))
 # plot_model(Rs_mod3x, type = "pred", terms = c("n_holes_f", "Symbiont"), show.data = TRUE) +
 #   theme_bw()
 # 
@@ -552,11 +551,11 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 ##//Rs fungi holes plot
 ##//Figure 3
 Rs_Sym_plot3 <- ggplot() +
-  geom_violin(data = Rs_plots[Rs_plots$Corr_LinFlux<=6,],
+  geom_violin(data = Rs_plots,
                aes(x = as.factor(n_holes), y = Corr_LinFlux, fill = Symbiont), color = "black", 
                show.legend = TRUE,  size = 1, alpha = 0.4, position = position_dodge(0.8), 
                trim=T) +
-    geom_boxplot(data = Rs_plots[Rs_plots$Corr_LinFlux<=6,],
+    geom_boxplot(data = Rs_plots,
                aes(x = as.factor(n_holes), y = Corr_LinFlux, fill = Symbiont), color = "black", 
                show.legend = TRUE,  size = 1.5, alpha = 0.25, position = position_dodge(0.8),
                notch = F, notchwidth = 0.95) +
@@ -579,23 +578,23 @@ Rs_Sym_plot3
 ##//Using the chamber observations to develop a scaler to interpolate fluxes across the landscape
 ##//AM and EcM Scaler calculations
 ##//Zero holes
-AM_0 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Corr_LinFlux<=6 & Rs_plots$Symbiont=="AM" & Rs_plots$n_holes==0])
-ECM_0 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Corr_LinFlux<=6 & Rs_plots$Symbiont=="ECM" & Rs_plots$n_holes==0])
+AM_0 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Symbiont=="AM" & Rs_plots$n_holes==0])
+ECM_0 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Symbiont=="ECM" & Rs_plots$n_holes==0])
 ##//One hole 
-AM_1 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Corr_LinFlux<=6 & Rs_plots$Symbiont=="AM" & Rs_plots$n_holes==1])
-ECM_1 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Corr_LinFlux<=6 & Rs_plots$Symbiont=="ECM" & Rs_plots$n_holes==1])
+AM_1 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Symbiont=="AM" & Rs_plots$n_holes==1])
+ECM_1 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Symbiont=="ECM" & Rs_plots$n_holes==1])
 ##//Two holes
-AM_2 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Corr_LinFlux<=6 & Rs_plots$Symbiont=="AM" & Rs_plots$n_holes==2])
-ECM_2 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Corr_LinFlux<=6 & Rs_plots$Symbiont=="ECM" & Rs_plots$n_holes==2])
+AM_2 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Symbiont=="AM" & Rs_plots$n_holes==2])
+ECM_2 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Symbiont=="ECM" & Rs_plots$n_holes==2])
 
 ##//No fungal types
-All_0 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Corr_LinFlux<=6 & Rs_plots$n_holes==0])
-All_1 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Corr_LinFlux<=6 & Rs_plots$n_holes==1])
-All_2 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Corr_LinFlux<=6 & Rs_plots$n_holes==2])
+All_0 <- median(Rs_plots$Corr_LinFlux[Rs_plots$n_holes==0])
+All_1 <- median(Rs_plots$Corr_LinFlux[Rs_plots$n_holes==1])
+All_2 <- median(Rs_plots$Corr_LinFlux[Rs_plots$n_holes==2])
 
 ##//All fungal types
-AM <- median(Rs_plots$Corr_LinFlux[Rs_plots$Corr_LinFlux<=6 & Rs_plots$Symbiont=="AM"])
-ECM <- median(Rs_plots$Corr_LinFlux[Rs_plots$Corr_LinFlux<=6 & Rs_plots$Symbiont=="ECM"])
+AM <- median(Rs_plots$Corr_LinFlux[Rs_plots$Symbiont=="AM"])
+ECM <- median(Rs_plots$Corr_LinFlux[Rs_plots$Symbiont=="ECM"])
 
 ##//Fungal pct differences
 Fun_Pdiff_1 <- abs(AM_0 - ECM_0) / ((AM_0 + ECM_0) / 2) * 100
@@ -709,6 +708,8 @@ load(paste(dirname(rstudioapi::getActiveDocumentContext()$path),
 
 ##// Uncomment to view model summaries and plots 
 # summary(fit_hole2x, prob = 0.89)
+summary(fit_hole2x, prob = 0.89)
+bayes_R2(Q10_mod1x, prob = c(0.055, 0.945))
 
 ##//Calculate Q10
 fit_holex_ex2 <- prepare_predictions(fit_hole2x)
@@ -801,7 +802,8 @@ load(paste(dirname(rstudioapi::getActiveDocumentContext()$path),
 
 
 ##// Uncomment to view model summaries and plots 
-# summary(Q10_mod1x)
+summary(Q10_mod1x, prob = 0.89)
+bayes_R2(Q10_mod1x, prob = c(0.055, 0.945))
 
 # ##//Test posteriors
 # hypQ10 = hypothesis(
@@ -1250,8 +1252,8 @@ load(paste(dirname(rstudioapi::getActiveDocumentContext()$path),
 # 
 # 
 # ##//Uncomment to print summaries and plots
-# summary(Reco_mod1, prob = 0.94)
-# bayes_R2(Reco_mod1, prob = c(0.03, 0.97))
+# summary(Reco_mod1, prob = 89)
+# bayes_R2(Reco_mod1, prob = c(0.055, 0.945))
 
 ##//Post hoc tests
 ##//get the adjusted means
@@ -1338,7 +1340,7 @@ load(paste(dirname(rstudioapi::getActiveDocumentContext()$path),
 # 
 ##//Uncomment to print summaries and plots
 # summary(fit_PreCicada_16y, prob = 0.89)
-# bayes_R2(fit_PreCicada_16y, prob = c(0.055, 0.89))
+# bayes_R2(fit_PreCicada_16y, prob = c(0.055, 0.945))
 # plot_model(fit_PreCicada_16y, type = "pred", terms = c("ST_Md_15y"), show.data = TRUE) + 
 #   theme_bw()
 
@@ -1383,7 +1385,7 @@ load(paste(dirname(rstudioapi::getActiveDocumentContext()$path),
 
 ##//Uncomment to print summaries and plots
 # summary(fit_Cicada_21, prob = 0.89)
-# bayes_R2(fit_Cicada_21, prob = c(0.055, 0.89))
+# bayes_R2(fit_Cicada_21, prob = c(0.055, 0.945))
 # plot_model(fit_Cicada_21, type = "pred", terms = c("ST_Md_21"), show.data = TRUE) + 
 #   theme_bw()
 
@@ -1428,7 +1430,7 @@ load(paste(dirname(rstudioapi::getActiveDocumentContext()$path),
 
 ##//Uncomment to print summaries and plots
 # summary(fit_Cicada_04, prob = 0.89)
-# bayes_R2(fit_Cicada_04, prob = c(0.055, 0.89))
+# bayes_R2(fit_Cicada_04, prob = c(0.055, 0.945))
 # plot_model(fit_Cicada_04, type = "pred", terms = c("ST_Md_04"), show.data = TRUE) + 
 #   theme_bw()
 
@@ -1505,7 +1507,7 @@ EC_Q10_sum = EC_Q10_d %>%
 load(paste(dirname(rstudioapi::getActiveDocumentContext()$path), 
                            "Q10_mod2_all.rda", sep = "/"))
 
-summary(Q10_mod2)
+summary(Q10_mod2, prob = 0.89)
 
 ##//Post hoc tests
 #get the adjusted means

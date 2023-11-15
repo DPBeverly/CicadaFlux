@@ -44,15 +44,13 @@ Code use to generate scaling analysis and supplemental bar graph in in figure S4
 
 Analysis Workflow Downloading the repository download the repository via GitHub ("https://github.com/DPBeverly/CicadaFlux")
 
-The data collected for this study are located on Zenodo: ("https://zenodo.org/records/10125404") "10.5281/zenodo.10125404" NOTE: The RMD file will automatically retrieve the data using the DOI so there is no data to download from Zenodo
+The data collected for this study are located on Zenodo: ("https://zenodo.org/records/10125404") "10.5281/zenodo.8431547" NOTE: The RMD file will automatically retrieve the data using the DOI so there is no data to download from Zenodo
 
 After you download the repository, download the AmeriFlux data associated with US-MMS AmeriFlux Site. Grab micromet data from AmeriFlux website "https://ameriflux.lbl.gov/sites/siteinfo/US-MMS"
 
 #//Download the US-MMS Base version (CC-BY-4.0) containing data hourly fluxes and meteorological variables ##//Once downloaded unzip the folder in the working directory housing rmd files ##//Note the data you download will likely contain more data than used in the manuscript as data is updated quarterly
 
 ####//Global respiration estimates ##//Soil respiration rasters are obtained from Global Gridded 1-km Annual Soil Respiration and Uncertainty Derived from SRDB V3 "https://daac.ornl.gov/CMS/guides/CMS_Global_Soil_Respiration.html" ##//Download data move .img files to the common working directory housing rmd files ##// This analysis will use the mean, lower quantile (25) and upper quantile (75) estimates
-
-##// Active cicada broods shapefiles "https://data.fs.usda.gov/geodata/edw/datasets.php?xmlKeyword=cicada" ##// download shapefiles, move files to working directory, and update pathways
 
 Data Analysis and codes for cicada flux analysis that corresponds to the Ecology Letters manuscript: The forest, the cicadas, and the holey fluxes: periodical cicada impacts on soil respiration 1 depends on tree mycorrhizal type (DOI).
 
@@ -135,6 +133,11 @@ Cicada hole counts throughout the phenology transects:
 "Holes_md_mx" == median number of the cicada holes
  
 Shape files: 
+##// download shapefiles, move files to working directory, and update pathways
+
 
 MMSF_Collars_v2==shapefile containing collar location and metadata for collars
 PhenoHoles_Dissolve_20_v2 == shapefile containing boundary (~20m) around phenology transect and associated metadata
+
+##// Active cicada broods shapefiles "https://data.fs.usda.gov/geodata/edw/datasets.php?xmlKeyword=cicada" 
+Counties_cicadas_forest_prop == Shapeflie with the modified estimates of forest coverage by county
