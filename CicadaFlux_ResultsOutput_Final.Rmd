@@ -7,7 +7,14 @@ editor_options:
   chunk_output_type: console
 ---
 
-# Cicada Flux Measurements from 2021
+# Title: The forest, the cicadas, and the holey fluxes: periodical cicada impacts on soil respiration depends on tree mycorrhizal type 
+## Authors: Daniel P. Beverly1,2, *, Elizabeth Huenupi2 (ehuenupi@iu.edu), Adrien Gandolfo1 (ad.gandolfo@gmail.com), Clara J. Lietzke3 (clietzke@iu.edu), Darren L. Ficklin4 (dficklin@indiana.edu) Mallory L. Barnes1 (malbarn@iu.edu), Jonathan D. Raff1,3 (jdraff@indiana.edu), Kimberly A. Novick1 (knovick@indiana.edu), and Richard P. Phillips2 (rpp6@indiana.edu)
+
+
+## Abstract:
+### The emergence of billions of periodical cicadas affects plant and animal communities profoundly, yet little is known about cicada impacts on soil carbon fluxes. We investigated the effects of Brood X cicadas (Magicicada septendecim, M. cassinii, and M. septendeculain) on soil CO2 fluxes (RS) in two Indiana forests. We hypothesized RS would be sensitive to emergence hole density, with the greatest effects occurring in soils with the lowest ambient fluxes. In support of our hypothesis, RS increased with increasing hole density, and greater effects were observed near AM-associating trees (which expressed lower ambient fluxes) than near EcM-associating trees. Additionally, RS from emergence holes increased temperature sensitivity (Q10) of RS by 13%, elevating the Q10 of ecosystem respiration. Brood X cicadas increased annual RS by ~2.5%, translating to an additional 717 Gg of CO2 across forested areas. As such, periodical cicadas can have substantial effects on soil processes and biogeochemistry. 
+
+
 
 ### Two Questions are developed on how cicada emergene influences soil respiration and carbon fluxes:
 
@@ -22,6 +29,13 @@ editor_options:
   
 ![Conceptual processes influencing RS following cicada emergence and predictions for tree mycorrhizal responses to cicada hole densities. Cicada emergence holes increase water infiltration **(a))**  reducing CO2 and oxygen diffusion creating an anaerobic environment which should decrease C fluxes **(b))**. Conversely, emergence holes can improve aerobic conditions thus increasing autotrophic respiration (Ra) or prime microbial respiration (Rh) via the modulation of dissolved organic C for both mycorrhizal types. The magnitude and direction of the RS response to cicada emergence holes is likely influenced by precipitation patterns and soil saturation levels directly following rain events. Detailed microbial metabolic processes within soils beneath AM- and EcM-associating trees are expected to vary based on biogeochemical responses to changes in baseline soil C stocks and transported dissolved organic C enhancing microbial decomposition (i.e., priming).](D:/Dropbox/Projects/Indiana/Data/CicadaFlux/CicadaConceptualFigure.png)
 
+
+## Build Notes
+### This code was built using R version 4.3.1 and RStudio 2023.06.1+524 "Mountain Hydrangea" Release for windows
+### This code requires the following R packages: zen4R; rstudioapi; readr; emmeans; sf; raster; geoR; gstat
+###     fields; rgdal; tidyverse; maptools; tmap; sp; readxl; ggplot2; lubridate; hutils; brms; modelr; sjPlot;
+###     sjstats; RColorBrewer; tidybayes; dplyr; tidyr; tidyselect; stringr; gridExtra; stars; rstan
+### NOTE: Running entire script with models and model outputs will take several hours and require upwards of 33 GB of RAM
 
 
 
@@ -44,7 +58,6 @@ library(fields)
 library(rgdal)
 library(tidyverse)
 library(maptools) 
-library(rgeos)
 library(tmap)
 library(sp) 
 library(readxl)
@@ -62,6 +75,8 @@ library(tidyr)
 library(tidyselect)
 library(stringr)
 library(gridExtra)
+library(stars)
+library(rstan)
 
 ##//Themes and color ramps
 theme_set(theme_classic())
@@ -85,12 +100,12 @@ doi <- "10.5281/zenodo.10125404"
 dir(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 ##//Download data from Zenodo
-CicadaData <- download_zenodo(
-  doi,
-  path = dirname(rstudioapi::getActiveDocumentContext()$path),
-  files = list(),
-  logger = NULL,
-  quiet = FALSE)
+# CicadaData <- download_zenodo(
+#   doi,
+#   path = dirname(rstudioapi::getActiveDocumentContext()$path),
+#   files = list(),
+#   logger = NULL,
+#   quiet = FALSE)
 
 ##//Check to make sure the data files have been downloaded to the correct directory
 dir(dirname(rstudioapi::getActiveDocumentContext()$path))
@@ -108,7 +123,6 @@ meholes <- read_csv(paste(dirname(rstudioapi::getActiveDocumentContext()$path),
 
 ##//Updating string names
 meholes$Fungi_Type <- ifelse(meholes$Fungi_Type=="ECM", "EcM", meholes$Fungi_Type)
-
 
 ##//Shapefiles used in the study 
 ##//Collar shapefiles
@@ -141,28 +155,28 @@ AmeriFlux_File <- paste(dirname(rstudioapi::getActiveDocumentContext()$path),
 dat_46m <- read.csv(AmeriFlux_File, 
                     skip = 2, na.strings = -9999)
 
-####//Global respiration estimates 
-##//Soil respiration rasters are obstained from Global Gridded 1-km Annual Soil Respiration and Uncertainty Derived from SRDB V3
-"https://daac.ornl.gov/CMS/guides/CMS_Global_Soil_Respiration.html"
-##//Download data move .img files to a common working directory
-##//  This analysis will use the mean, lower quantile (25) and upper quantile (75) estimates 
-
-##//After downloading .img files in working directories and update data pathways
-SoilFlux <- read_stars( paste(dirname(rstudioapi::getActiveDocumentContext()$path), 
-  "CMS_Global_Soil_Respiration_1736/CMS_Global_Soil_Respiration_1736/data/Clipped_soil_respiration_mean_eastern_US.img",
-  sep = "/")) 
-SoilFlux_25 <- read_stars(paste(dirname(rstudioapi::getActiveDocumentContext()$path),
-  "CMS_Global_Soil_Respiration_1736/CMS_Global_Soil_Respiration_1736/data/Clipped_soil_respiration_Q25_eastern_US.img",
-  sep = "/"))
-SoilFlux_75 <- read_stars(paste(dirname(rstudioapi::getActiveDocumentContext()$path),
-  "/CMS_Global_Soil_Respiration_1736/CMS_Global_Soil_Respiration_1736/data/Clipped_soil_respiration_Q75_eastern_US.img", 
-  sep = "/"))
-
-
-##// Active cicada broods shapefiles "https://data.fs.usda.gov/geodata/edw/datasets.php?xmlKeyword=cicada"
-##  download shapefiles, move files to working directory, and update pathways
-cicadapolys <- st_read(paste(dirname(rstudioapi::getActiveDocumentContext()$path), 
-                              "CicadaCounties.shp", sep = "/"))
+# ####//Global respiration estimates 
+# ##//Soil respiration rasters are obstained from Global Gridded 1-km Annual Soil Respiration and Uncertainty Derived from SRDB V3
+# "https://daac.ornl.gov/CMS/guides/CMS_Global_Soil_Respiration.html"
+# ##//Download data move .img files to a common working directory
+# ##//  This analysis will use the mean, lower quantile (25) and upper quantile (75) estimates 
+# 
+# ##//After downloading .img files in working directories and update data pathways
+# SoilFlux <- read_stars( paste(dirname(rstudioapi::getActiveDocumentContext()$path), 
+#   "CMS_Global_Soil_Respiration_1736/CMS_Global_Soil_Respiration_1736/data/Clipped_soil_respiration_mean_eastern_US.img",
+#   sep = "/")) 
+# SoilFlux_25 <- read_stars(paste(dirname(rstudioapi::getActiveDocumentContext()$path),
+#   "CMS_Global_Soil_Respiration_1736/CMS_Global_Soil_Respiration_1736/data/Clipped_soil_respiration_Q25_eastern_US.img",
+#   sep = "/"))
+# SoilFlux_75 <- read_stars(paste(dirname(rstudioapi::getActiveDocumentContext()$path),
+#   "/CMS_Global_Soil_Respiration_1736/CMS_Global_Soil_Respiration_1736/data/Clipped_soil_respiration_Q75_eastern_US.img", 
+#   sep = "/"))
+# 
+# 
+# ##// Active cicada broods shapefiles "https://data.fs.usda.gov/geodata/edw/datasets.php?xmlKeyword=cicada"
+# ##  download shapefiles, move files to working directory, and update pathways
+# cicadapolys <- st_read(paste(dirname(rstudioapi::getActiveDocumentContext()$path), 
+#                               "CicadaCounties.shp", sep = "/"))
 
 ##//Optional data product for making the maps but not used in the R code
 # ##//State outlines
@@ -184,13 +198,6 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 ##//This code has syntax for saving and loading statistical tests used throughout the manuscript. The .rda files used in figure generation are included with data. Running and saving all the models may take several hours depending on computer and memory configurations
 
 ##//Note only model loads commands have been updated to run through the common directory. Full functionality will require user to update pathways to user specifications 
-
-
-# Load the zen4R library
-library(zen4R)
-library(rstudioapi)
-library(readr)
-library(emmeans)
 
 ##//Main Figure 2
 ##//Week vector
@@ -311,7 +318,7 @@ ggplot() +
 #Rs_plots
 
 ##//Uniformed Prior
-my.prior <- set_prior("uniform(-30000,30000)", class = "b")
+# my.prior <- set_prior("uniform(-30000,30000)", class = "b")
 
 ##//All model runs are commented out and outputs are loaded to increase write speeds
 ##///Temperature over time model
@@ -442,7 +449,6 @@ my.prior <- set_prior("uniform(-30000,30000)", class = "b")
 
 ```{r fig.asp = 0.8, fig.width = 15, echo=FALSE}
 knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
-library(emmeans)
 ##///This section corresponds to the Rs models described in the manuscript
 
 ##//Timeseries model
@@ -586,9 +592,6 @@ ECM_2 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Corr_LinFlux<=6 & Rs_plots$Symbio
 All_0 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Corr_LinFlux<=6 & Rs_plots$n_holes==0])
 All_1 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Corr_LinFlux<=6 & Rs_plots$n_holes==1])
 All_2 <- median(Rs_plots$Corr_LinFlux[Rs_plots$Corr_LinFlux<=6 & Rs_plots$n_holes==2])
-
-
-
 
 ##//All fungal types
 AM <- median(Rs_plots$Corr_LinFlux[Rs_plots$Corr_LinFlux<=6 & Rs_plots$Symbiont=="AM"])
@@ -1011,32 +1014,7 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 
 ##//Getting me some packages
 ##//Package management
-library(bigleaf)
-library(tidybayes)
-library(rstan)
-library(brms)
-library(modelr)
-library(sjPlot)
-library(sjstats)
-library(RColorBrewer)
-library(lubridate)
-library(readxl)
-library(tidyverse)
-library(hutils)
-library(dplyr)
-library(plyr)
-library(tidyr)
-library(tidyselect)
-library(stringr)
-library(matrixStats)
-library(knitr)
-library(car)
-library(corrplot)
-library(hysteresis)
-library(gridExtra)
-library(ggpubr)
-library(TreeDep)
-library(emmeans)
+
 
 theme_set(theme_minimal())
 GoAvsGo <- c("#6F263D", "#236192", "#A2AAAD", "#000000")
@@ -1055,13 +1033,6 @@ GoAvsGo <- c("#6F263D", "#236192", "#A2AAAD", "#000000")
 #                         "AMF_US-MMS_BASE-BADM_21-5/AMF_US-MMS_BASE_HR_21-5.csv" , sep = "/")
 # dat_46m <- read.csv(AmeriFlux_File, 
 #                     skip = 2, na.strings = -9999)
-
-
-# ##//AmeriFlux download for local machine linked to my personal dropbox
-# ##//Update teh file path to match local pathways
-AmeriFlux_File <- "D:/Dropbox/Projects/Indiana/Data/CicadaFlux/AMF_US-MMS_BASE-BADM_21-5/AMF_US-MMS_BASE_HR_21-5.csv"
-dat_46m <- read.csv(AmeriFlux_File,
-                    skip = 2, na.strings = -9999)
 
 ##//Updating the timestamps from AmeriFlux formats
 dat_46m$TIMESTAMP_END2 <- dat_46m$TIMESTAMP_END * 100
@@ -1195,7 +1166,6 @@ PreCicada2_sumz$FC_LVar_15y <- PreCicada2_sumz$FC_Md_15y - PreCicada2_sumz$FC_St
 
 PreCicada2_sumz$ST_UVar_15y <- PreCicada2_sumz$ST_Md_15y + PreCicada2_sumz$ST_Std_15y
 PreCicada2_sumz$ST_LVar_15y <- PreCicada2_sumz$ST_Md_15y - PreCicada2_sumz$ST_Std_15y
-
 
 ##// Eddy Flux figures
 ##// Day in which soil temperature reaches 68 F
@@ -1670,7 +1640,7 @@ ggplot() +
         legend.text=element_text(size=30)) 
 
 
-
+###//These figures were combined in inkscape
 
 ```
 

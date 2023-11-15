@@ -1,6 +1,6 @@
 ##//This script serves to scale the effect of cicada holes across the counties contain periodical cicadas
 ##//Note this script is separate as the data and maps require significant computing power 
-
+##// The map presented in Figure S4 was created in QGIS and highlights the spatial patterns and regions containing periodical cicadas
 #//Load Libraries
 #//Get Packages
 require(sp) #//Data management tools in arc
