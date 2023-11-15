@@ -15,11 +15,6 @@ The Cicada flux repository houses the scripts, codes, and workflows for obtainin
 #### *__2)__* How do soils beneath different tree types (i.e., AM vs EcM mycorrhizal fungi) modulate these effects?
   
 #### *__3)__* To what extent do emergence holes influence ecosystem respiration (RECO)?
-  
-  
-#####        Mechanistic hypothesis: 
-  
-![Conceptual processes influencing RS following cicada emergence and predictions for tree mycorrhizal responses to cicada hole densities. Cicada emergence holes increase water infiltration **(a))**  reducing CO2 and oxygen diffusion creating an anaerobic environment which should decrease C fluxes **(b))**. Conversely, emergence holes can improve aerobic conditions thus increasing autotrophic respiration (Ra) or prime microbial respiration (Rh) via the modulation of dissolved organic C for both mycorrhizal types. The magnitude and direction of the RS response to cicada emergence holes is likely influenced by precipitation patterns and soil saturation levels directly following rain events. Detailed microbial metabolic processes within soils beneath AM- and EcM-associating trees are expected to vary based on biogeochemical responses to changes in baseline soil C stocks and transported dissolved organic C enhancing microbial decomposition (i.e., priming).](D:/Dropbox/Projects/Indiana/Data/CicadaFlux/CicadaConceptualFigure.png)
 
 
 ## Build Notes
