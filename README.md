@@ -105,90 +105,102 @@ To reproduce the analysis presented in the manuscript, follow these steps:
    - Download the data and move the `.img` files to the common working directory for use in the analysis. Utilize the mean, 25th percentile (lower quantile), and 75th percentile (upper quantile) estimates for the analysis.
 
 
-Datasets used include:
-Chamber respiration data: CicadaChamberFlux_2021.csv
-"day" == Date
-"UnqMeas"  == Unique measurement ID
-"Type"  == Type of measurements (1 == Spot measurement)
-"Etime"  == measurement time
-"Tcham"  == chamber temperature (C)
-"Pressure"  == Air pressure (kPa)
-"H2O" == H20 concentration 
-"CO2" == CO2 concentration
-"Cdry" == Dry corrected C 
-"Tbench" == Bench temperature (C)
-"RH" == Chamber relative humidity (%)
-"Tboard" == Board Temperature (C)
-"Vin" == Input voltage (volts)
-"CO2ABS" = Absolute CO2 Concentration
-"H2OABS" == Absolute H2O concentration
-"Hour" == Hour of the day
-"DOY" == Day of year
-"RAWCO2" == Raw CO2 signal
-"RAWCO2REF" ==  CO2 signal reference
-"RAWH2O" == Raw H2O signal
-"RAWH2OREF" == H2O signal reference
-"OBS" == Observation number
-"VCham" == Chamber volume
-"Offset" == Collar offset
-"Area" == Chamber area 
-"VTotal" == Total measurement volume
-"ExpFlux" == Exponential Efflux
-"ExpFluxCV"  == Coefficient of variance on the Exponential Efflux
-"Exp_dCdt" == Exponential Efflux change in co2 per unit time
-"ExpR2" == Regression coefficient on the Exponential Efflux       
-"LinFlux" == Linear Efflux
-"LinFluxCV" == Coefficient of variance on the Linear Efflux
-"Lin_dCdt" == Linear Efflux change in co2 per unit time
-"LinR2" == Regression coefficient on the Linear Efflux  
-"LinFluxSE" == Standard Error on the Linear Efflux  
-"File" == File containing observation            
-"Collar" == Collar ID
-"LinReg_R2" == Linear regression coefficient 
-"CO2_t0" == CO2 concentration at point zero
-"CO2_t0_LCI" == Lower CI on CO2 concentration at point zero
-"CO2_t0_HCI" == Upper CI CO2 concentration at point zero
-"dCdt" == Slope of change in CO2 per unit time         
-"dCdt_LCI"  == Lower CI for the slope of change in CO2 per unit time
-"dCdt_HCI" == Upper CI for the slope of change in CO2 per unit time
-"Site" == Site of measurement 
-"Date" == Date of Measurement
-"SoilT_C" == Soil Temperature (C)
-"SoilVWC_pct" == Soil Moisture (% VWC)
-"n_holes" == Number of cicada holes
-"Corr_offset_cm" == Actual collar offset
-"Pair" == Collar pair ID
-"Species"== Tree species ID
-"Symbiont" == Fungal symbiont 
-"Hole_Collar" == holes per collar
-"Hole_Plot_m2" == holes per sq meter 
-"Latitude"  == Measurement latitude
-"Longitude" == Measurement longitude 
-"Altitude"  == Measurement altitude 
-"VCollar" == Corrected chamber volume
-"Corr_VTotal" ==  Corrected chamber volume based    
-"Corr_LinFlux" == Corrected linear efflux
-"Corr_LinFlux_LCI" == Lower CI for corrected linear efflux
-"Corr_LinFlux_HCI" == Upper CI for corrected linear efflux
+## Dataset Descriptions
 
+### Chamber Respiration Data: `CicadaChamberFlux_2021.csv`
 
-Cicada hole counts throughout the phenology transects:
-"Site"== Measurement site
-"Tree_ID" == TREE ID
-"Species" == Tree Species
-"Fungi_Type" == Fungal Symbiont
-"Lat" == measurement latitude 
-"Long" == measurement longitude
-"Holes_mx" == Maximum number of the cicada holes
-"Holes_mx_sd" == standard deviation number of the cicada holes
-"Holes_md_mx" == median number of the cicada holes
- 
-Shape files: 
-##// download shapefiles, move files to working directory, and update pathways
+This file contains the following variables:
 
+- `day`: Date of measurement.
+- `UnqMeas`: Unique measurement ID.
+- `Type`: Type of measurement (1 = Spot measurement).
+- `Etime`: Measurement time.
+- `Tcham`: Chamber temperature (°C).
+- `Pressure`: Air pressure (kPa).
+- `H2O`: H2O concentration.
+- `CO2`: CO2 concentration.
+- `Cdry`: Dry corrected C.
+- `Tbench`: Bench temperature (°C).
+- `RH`: Chamber relative humidity (%).
+- `Tboard`: Board temperature (°C).
+- `Vin`: Input voltage (volts).
+- `CO2ABS`: Absolute CO2 concentration.
+- `H2OABS`: Absolute H2O concentration.
+- `Hour`: Hour of the day.
+- `DOY`: Day of the year.
+- `RAWCO2`: Raw CO2 signal.
+- `RAWCO2REF`: CO2 signal reference.
+- `RAWH2O`: Raw H2O signal.
+- `RAWH2OREF`: H2O signal reference.
+- `OBS`: Observation number.
+- `VCham`: Chamber volume.
+- `Offset`: Collar offset.
+- `Area`: Chamber area.
+- `VTotal`: Total measurement volume.
+- `ExpFlux`: Exponential efflux.
+- `ExpFluxCV`: Coefficient of variance on the exponential efflux.
+- `Exp_dCdt`: Exponential efflux change in CO2 per unit time.
+- `ExpR2`: Regression coefficient on the exponential efflux.
+- `LinFlux`: Linear efflux.
+- `LinFluxCV`: Coefficient of variance on the linear efflux.
+- `Lin_dCdt`: Linear efflux change in CO2 per unit time.
+- `LinR2`: Regression coefficient on the linear efflux.
+- `LinFluxSE`: Standard error on the linear efflux.
+- `File`: File containing observation.
+- `Collar`: Collar ID.
+- `LinReg_R2`: Linear regression coefficient.
+- `CO2_t0`: CO2 concentration at point zero.
+- `CO2_t0_LCI`: Lower confidence interval on CO2 concentration at point zero.
+- `CO2_t0_HCI`: Upper confidence interval on CO2 concentration at point zero.
+- `dCdt`: Slope of change in CO2 per unit time.
+- `dCdt_LCI`: Lower confidence interval for the slope of change in CO2 per unit time.
+- `dCdt_HCI`: Upper confidence interval for the slope of change in CO2 per unit time.
+- `Site`: Site of measurement.
+- `Date`: Date of measurement.
+- `SoilT_C`: Soil temperature (°C).
+- `SoilVWC_pct`: Soil moisture (% VWC).
+- `n_holes`: Number of cicada holes.
+- `Corr_offset_cm`: Actual collar offset.
+- `Pair`: Collar pair ID.
+- `Species`: Tree species ID.
+- `Symbiont`: Fungal symbiont.
+- `Hole_Collar`: Holes per collar.
+- `Hole_Plot_m2`: Holes per square meter.
+- `Latitude`: Measurement latitude.
+- `Longitude`: Measurement longitude.
+- `Altitude`: Measurement altitude.
+- `VCollar`: Corrected chamber volume.
+- `Corr_VTotal`: Corrected total measurement volume.
+- `Corr_LinFlux`: Corrected linear efflux.
+- `Corr_LinFlux_LCI`: Lower confidence interval for corrected linear efflux.
+- `Corr_LinFlux_HCI`: Upper confidence interval for corrected linear efflux.
 
-MMSF_Collars_v2==shapefile containing collar location and metadata for collars
-PhenoHoles_Dissolve_20_v2 == shapefile containing boundary (~20m) around phenology transect and associated metadata
+### Cicada Hole Counts Data
 
-##// Active cicada broods shapefiles "https://data.fs.usda.gov/geodata/edw/datasets.php?xmlKeyword=cicada" 
-Counties_cicadas_forest_prop == Shapeflie with the modified estimates of forest coverage by county
+This includes counts of cicada holes throughout the phenology transects with variables:
+
+- `Site`: Measurement site.
+- `Tree_ID`: TREE ID.
+- `Species`: Tree species.
+- `Fungi_Type`: Fungal symbiont.
+- `Lat`: Measurement latitude.
+- `Long`: Measurement longitude.
+- `Holes_mx`: Maximum number of the cicada holes.
+- `Holes_mx_sd`: Standard deviation number of the cicada holes.
+- `Holes_md_mx`: Median number of the cicada holes.
+
+### Shape Files
+
+The following shape files are used:
+
+- `MMSF_Collars_v2`: Shapefile containing collar location and metadata for collars.
+- `PhenoHoles_Dissolve_20_v2`: Shapefile containing boundary (~20m) around phenology transect and associated metadata.
+
+#### Active Cicada Broods Shapefiles
+
+- [Active cicada broods shapefiles](https://data.fs.usda.gov/geodata/edw/datasets.php?xmlKeyword=cicada): These files include the modified estimates of forest coverage by county.
+
+### Download and Preparation Instructions
+
+1. Download the shapefiles and move the files to the working directory.
+2. Ensure pathways in the R scripts are updated to reflect the new locations of the shapefiles.
