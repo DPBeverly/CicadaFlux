@@ -55,7 +55,10 @@ library(raster)
 library(geoR) # If you have a mac, you may have issues with this package. It requires XQuartz to be installed, which is not natively included in some versions of MacOS. 
 library(gstat)
 library(fields)
-library(rgdal)
+library(rgdal) #rgdal is no longer available on CRAN. If you do not have installed, you can install a legacy version from the CRAN archive, which are available here: https://cran.r-project.org/src/contrib/Archive/rgdal/
+
+#Note: the rgdal package will require GDAL to be installed on your machine. You can usually install it through your system's package manager (like apt-get on Ubuntu, brew on macOS, or conda for Conda environments).
+
 library(tidyverse)
 library(maptools) 
 library(tmap)
