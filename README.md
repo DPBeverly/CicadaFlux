@@ -29,10 +29,42 @@ Our key questions on how cicada emergence influences soil respiration and carbon
 
 This code was built using R version 4.3.1 and RStudio 2023.06.1+524 "Mountain Hydrangea" Release for windows
 
----
-### This code requires the following R packages: zen4R; rstudioapi; readr; emmeans; sf; raster; geoR; gstat
-###     fields; rgdal; tidyverse; maptools; tmap; sp; readxl; ggplot2; lubridate; hutils; brms; modelr; sjPlot;
-###     sjstats; RColorBrewer; tidybayes; dplyr; tidyr; tidyselect; stringr; gridExtra; stars; rstan
+### Required R Packages
+
+The following R packages are required to run the code:
+
+- `zen4R`
+- `rstudioapi`
+- `readr`
+- `emmeans`
+- `sf`
+- `raster`
+- `geoR`
+- `gstat`
+- `fields`
+- `rgdal`
+- `tidyverse`
+- `maptools`
+- `tmap`
+- `sp`
+- `readxl`
+- `ggplot2`
+- `lubridate`
+- `hutils`
+- `brms`
+- `modelr`
+- `sjPlot`
+- `sjstats`
+- `RColorBrewer`
+- `tidybayes`
+- `dplyr`
+- `tidyr`
+- `tidyselect`
+- `stringr`
+- `gridExtra`
+- `stars`
+- `rstan`
+
 ### NOTE: Running entire script with models and model outputs will take several hours and require upwards of 33 GB of RAM
 
 
