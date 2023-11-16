@@ -1,26 +1,35 @@
-README.md
+# README
 
-The Cicada flux repository houses the scripts, codes, and workflows for obtaining results associated with the The forest, the cicadas, and the holey fluxes manuscript.
-# Title: The forest, the cicadas, and the holey fluxes: periodical cicada impacts on soil respiration depends on tree mycorrhizal type 
+## Cicada flux repository: data and code for Beverly et al. 2023 
 
-## Authors: Daniel P. Beverly1,2, *, Elizabeth Huenupi2 (ehuenupi@iu.edu), Adrien Gandolfo1 (ad.gandolfo@gmail.com), Clara J. Lietzke3 (clietzke@iu.edu), Darren L. Ficklin4 (dficklin@indiana.edu) Mallory L. Barnes1 (malbarn@iu.edu), Jonathan D. Raff1,3 (jdraff@indiana.edu), Kimberly A. Novick1 (knovick@indiana.edu), and Richard P. Phillips2 (rpp6@indiana.edu)
+This repository houses the scripts, codes, and workflows for obtaining results associated with the manuscript: 
 
-## Abstract:
-### The emergence of billions of periodical cicadas affects plant and animal communities profoundly, yet little is known about cicada impacts on soil carbon fluxes. We investigated the effects of Brood X cicadas (Magicicada septendecim, M. cassinii, and M. septendeculain) on soil CO2 fluxes (RS) in two Indiana forests. We hypothesized RS would be sensitive to emergence hole density, with the greatest effects occurring in soils with the lowest ambient fluxes. In support of our hypothesis, RS increased with increasing hole density, and greater effects were observed near AM-associating trees (which expressed lower ambient fluxes) than near EcM-associating trees. Additionally, RS from emergence holes increased temperature sensitivity (Q10) of RS by 13%, elevating the Q10 of ecosystem respiration. Brood X cicadas increased annual RS by ~2.5%, translating to an additional 717 Gg of CO2 across forested areas. As such, periodical cicadas can have substantial effects on soil processes and biogeochemistry. 
+### The forest, the cicadas, and the holey fluxes: periodical cicada impacts on soil respiration depends on tree mycorrhizal type 
 
+#### Authors: Daniel P. Beverly1,2, *, Elizabeth Huenupi2 (ehuenupi@iu.edu), Adrien Gandolfo1 (ad.gandolfo@gmail.com), Clara J. Lietzke3 (clietzke@iu.edu), Darren L. Ficklin4 (dficklin@indiana.edu) Mallory L. Barnes1 (malbarn@iu.edu), Jonathan D. Raff1,3 (jdraff@indiana.edu), Kimberly A. Novick1 (knovick@indiana.edu), and Richard P. Phillips2 (rpp6@indiana.edu)
 
+---
 
-### Two Questions are developed on how cicada emergene influences soil respiration and carbon fluxes:
+### Abstract:
 
-#### *__1)__* To what extent does cicada emergence hole density influence R[S]?
+The emergence of billions of periodical cicadas affects plant and animal communities profoundly, yet little is known about cicada impacts on soil carbon fluxes. We investigated the effects of Brood X cicadas (Magicicada septendecim, M. cassinii, and M. septendeculain) on soil CO2 fluxes (RS) in two Indiana forests. We hypothesized RS would be sensitive to emergence hole density, with the greatest effects occurring in soils with the lowest ambient fluxes. In support of our hypothesis, RS increased with increasing hole density, and greater effects were observed near AM-associating trees (which expressed lower ambient fluxes) than near EcM-associating trees. Additionally, RS from emergence holes increased temperature sensitivity (Q10) of RS by 13%, elevating the Q10 of ecosystem respiration. Brood X cicadas increased annual RS by ~2.5%, translating to an additional 717 Gg of CO2 across forested areas. As such, periodical cicadas can have substantial effects on soil processes and biogeochemistry. 
 
-#### *__2)__* How do soils beneath different tree types (i.e., AM vs EcM mycorrhizal fungi) modulate these effects?
-  
-#### *__3)__* To what extent do emergence holes influence ecosystem respiration (RECO)?
+---
+
+### Research Questions: 
+
+Our key questions on how cicada emergence influences soil respiration and carbon fluxes are:
+
+1. To what extent does cicada emergence hole density influence R[S]?
+2. How do soils beneath different tree types (i.e., AM vs EcM mycorrhizal fungi) modulate these effects?
+3. To what extent do emergence holes influence ecosystem respiration (RECO)?
 
 
 ## Build Notes
-### This code was built using R version 4.3.1 and RStudio 2023.06.1+524 "Mountain Hydrangea" Release for windows
+
+This code was built using R version 4.3.1 and RStudio 2023.06.1+524 "Mountain Hydrangea" Release for windows
+
+---
 ### This code requires the following R packages: zen4R; rstudioapi; readr; emmeans; sf; raster; geoR; gstat
 ###     fields; rgdal; tidyverse; maptools; tmap; sp; readxl; ggplot2; lubridate; hutils; brms; modelr; sjPlot;
 ###     sjstats; RColorBrewer; tidybayes; dplyr; tidyr; tidyselect; stringr; gridExtra; stars; rstan
