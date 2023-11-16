@@ -76,6 +76,7 @@ The following R packages are required to run the code:
 - **Figures/**: Folder containing figures found in the manuscript.
 - **R_CicadfluxDataManagement.R**:  Optional data management script, but the same routine is found in the RMD file
 - **R_ScalingCicadaFluxCounties_Map.R**: Code use to generate scaling analysis and supplemental bar graph in in figure S4
+
 ---
 
 ## Data Access and Analysis Workflow
@@ -84,17 +85,15 @@ To reproduce the analysis presented in the manuscript, follow these steps:
 
 1. **Repository Download**
    - Clone the repository or fork your own copy from GitHub:
-     `[CicadaFlux Repository](https://github.com/DPBeverly/CicadaFlux)`
+     https://github.com/DPBeverly/CicadaFlux
 
 2. **Data Access**
-   - The primary data for this study is hosted on Zenodo:
-     `[Zenodo Record](https://zenodo.org/record/10125404)`
+   - The primary data for this study is hosted on Zenodo: https://zenodo.org/record/10125404
      - DOI: `10.5281/zenodo.8431547`
    - *Note*: The R Markdown file automatically retrieves the dataset using the DOI, so manual download from Zenodo is not required.
 
 3. **AmeriFlux Data Download**
-   - Obtain the AmeriFlux micrometeorological data associated with the US-MMS site from the AmeriFlux website:
-     `[US-MMS AmeriFlux Site Data](https://ameriflux.lbl.gov/sites/siteinfo/US-MMS)`
+   - Obtain the AmeriFlux micrometeorological data associated with the US-MMS site from the AmeriFlux website: https://ameriflux.lbl.gov/sites/siteinfo/US-MMS
    - Download the US-MMS Base version (CC-BY-4.0) which contains hourly flux and meteorological variables.
 
 4. **Data Preparation**
@@ -102,12 +101,9 @@ To reproduce the analysis presented in the manuscript, follow these steps:
    - *Note*: The downloaded dataset may contain more recent data than was used in the manuscript, as the data on AmeriFlux is updated quarterly.
 
 5. **Global Respiration Estimates**
-   - Access the global soil respiration rasters derived from SRDB V3:
-     `[Global Soil Respiration Data](https://daac.ornl.gov/CMS/guides/CMS_Global_Soil_Respiration.html)`
+   - Access the global soil respiration rasters derived from SRDB V3: https://daac.ornl.gov/CMS/guides/CMS_Global_Soil_Respiration.html
    - Download the data and move the `.img` files to the common working directory for use in the analysis. Utilize the mean, 25th percentile (lower quantile), and 75th percentile (upper quantile) estimates for the analysis.
 
-
-Data Analysis and codes for cicada flux analysis that corresponds to the Ecology Letters manuscript: The forest, the cicadas, and the holey fluxes: periodical cicada impacts on soil respiration 1 depends on tree mycorrhizal type (DOI).
 
 Datasets used include:
 Chamber respiration data: CicadaChamberFlux_2021.csv
