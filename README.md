@@ -65,35 +65,38 @@ The following R packages are required to run the code:
 - `stars`
 - `rstan`
 
-### NOTE: Running entire script with models and model outputs will take several hours and require upwards of 33 GB of RAM
+**NOTE:** Running entire script, including models and model outputs will take several hours and require upwards of 33 GB of RAM. 
+
+### Repository Contents
 
 
-This repository contains the markdown file (.RMD) that reproduces figures and analysis within the manuscript.
+- **CicadaFlux.Rproj**: The RStudio Project File.
+- **CicadaFlux_ResultsOutput_Final.html**: HTML output of knitted .RMD (compiled results for the data analysis) 
+- **CicadaFlux_ResultsOutput_Final.Rmd**: RMD file to reproduce all analyses and generate all figures presented in the analysis.
+- **Figures/**: Folder containing figures found in the manuscript.
+- **R_CicadfluxDataManagement.R**:  Optional data management script, but the same routine is found in the RMD file
+- **R_ScalingCicadaFluxCounties_Map.R**: Code use to generate scaling analysis and supplemental bar graph in in figure S4
+---
 
-Files: "CicadaFlux.Rproj"
-The RStudio Project File
+### Data Access and Analysis Workflow: 
 
-"CicadaFlux_ResultsOutput_Final.html" HTML output of compiled results for the data analysis
+1. **Repository download**: Clone or fork your own copy of the repository via GitHub at `https://github.com/DPBeverly/CicadaFlux`
 
-"CicadaFlux_ResultsOutput_Final.Rmd" RMD file to regenerate the output files and figures
+2. **Data access**: The data collected for this study are located on Zenodo: ("https://zenodo.org/records/10125404") "10.5281/zenodo.8431547". 
 
-"Figures"
-Folder containing figures found in the manuscript
+**NOTE: The RMD file will automatically retrieve the data using the DOI so there is no data to download from Zenodo**
 
-"R_CicadfluxDataManagement.R" Optional data management script, but the same routine is found in the RMD file
+3. ** After you download the repository, download the AmeriFlux data associated with US-MMS AmeriFlux Site. Grab micromet data from AmeriFlux website "https://ameriflux.lbl.gov/sites/siteinfo/US-MMS"**
 
-"R_ScalingCicadaFluxCounties_Map.R"
-Code use to generate scaling analysis and supplemental bar graph in in figure S4
+4. ** Download the US-MMS Base version (CC-BY-4.0) containing data hourly fluxes and meteorological variables** 
 
-Analysis Workflow Downloading the repository download the repository via GitHub ("https://github.com/DPBeverly/CicadaFlux")
+5. Once downloadeded, unzip the folder in the working directory housing rmd files
 
-The data collected for this study are located on Zenodo: ("https://zenodo.org/records/10125404") "10.5281/zenodo.8431547" NOTE: The RMD file will automatically retrieve the data using the DOI so there is no data to download from Zenodo
+**NOTE: the data you download will likely contain more data than used in the manuscript as data is updated quarterly**
 
-After you download the repository, download the AmeriFlux data associated with US-MMS AmeriFlux Site. Grab micromet data from AmeriFlux website "https://ameriflux.lbl.gov/sites/siteinfo/US-MMS"
+6. Global respiration estimates: Soil respiration rasters are obtained from Global Gridded 1-km Annual Soil Respiration and Uncertainty Derived from SRDB V3 "https://daac.ornl.gov/CMS/guides/CMS_Global_Soil_Respiration.html" 
 
-#//Download the US-MMS Base version (CC-BY-4.0) containing data hourly fluxes and meteorological variables ##//Once downloaded unzip the folder in the working directory housing rmd files ##//Note the data you download will likely contain more data than used in the manuscript as data is updated quarterly
-
-####//Global respiration estimates ##//Soil respiration rasters are obtained from Global Gridded 1-km Annual Soil Respiration and Uncertainty Derived from SRDB V3 "https://daac.ornl.gov/CMS/guides/CMS_Global_Soil_Respiration.html" ##//Download data move .img files to the common working directory housing rmd files ##// This analysis will use the mean, lower quantile (25) and upper quantile (75) estimates
+7. Download soil respiration data, then move .img files to the common working directory housing rmd files. This analysis will use the mean, lower quantile (25) and upper quantile (75) estimates.
 
 Data Analysis and codes for cicada flux analysis that corresponds to the Ecology Letters manuscript: The forest, the cicadas, and the holey fluxes: periodical cicada impacts on soil respiration 1 depends on tree mycorrhizal type (DOI).
 
