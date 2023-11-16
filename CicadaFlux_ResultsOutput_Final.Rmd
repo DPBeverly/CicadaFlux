@@ -52,7 +52,7 @@ library(readr)
 library(emmeans)
 library(sf)
 library(raster)
-library(geoR)
+library(geoR) # If you have a mac, you may have issues with this package. It requires XQuartz to be installed, which is not natively included in some versions of MacOS. 
 library(gstat)
 library(fields)
 library(rgdal)

@@ -114,7 +114,6 @@ To reproduce the analysis presented in the manuscript, follow these steps:
    - Access the global soil respiration rasters derived from SRDB V3: https://daac.ornl.gov/CMS/guides/CMS_Global_Soil_Respiration.html
    - Download the data and move the `.img` files to the common working directory for use in the analysis. Utilize the mean, 25th percentile (lower quantile), and 75th percentile (upper quantile) estimates for the analysis.
 
-
 ## Dataset Descriptions
 
 ### Chamber Respiration Data: `CicadaChamberFlux_2021.csv`
