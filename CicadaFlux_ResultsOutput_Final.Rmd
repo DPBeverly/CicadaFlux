@@ -51,14 +51,13 @@ library(rstudioapi)
 library(readr)
 library(emmeans)
 library(sf)
-#library(raster)
+library(raster)
 library(geoR) # If you have a mac, you may have issues with this package. It requires XQuartz to be installed, which is not natively included in some versions of MacOS. 
 library(gstat)
 library(fields)
-#library(rgdal) #rgdal is no longer available on CRAN. If you do not have installed, you can install a legacy version from the CRAN archive, which are available here: https://cran.r-project.org/src/contrib/Archive/rgdal/
+library(rgdal) #rgdal is no longer available on CRAN. If you do not have installed, you can install a legacy version from the CRAN archive, which are available here: https://cran.r-project.org/src/contrib/Archive/rgdal/
 
 #Note: the rgdal package will require GDAL to be installed on your machine. You can usually install it through your system's package manager (like apt-get on Ubuntu, brew on macOS, or conda for Conda environments).
-library(terra)
 library(tidyverse)
 library(maptools) 
 library(tmap)
@@ -130,10 +129,12 @@ meholes$Fungi_Type <- ifelse(meholes$Fungi_Type=="ECM", "EcM", meholes$Fungi_Typ
 
 ##//Shapefiles used in the study 
 ##//Collar shapefiles
-MMSF_pheno <- vect(paste0(dirname(rstudioapi::getActiveDocumentContext()$path), "/PhenoHoles_MMSF_v2.shp"))
 
+MMSF_pheno <- readOGR(dsn = dirname(rstudioapi::getActiveDocumentContext()$path), 
+                      layer="PhenoHoles_MMSF_v2")
 ###//Plot boundary
-MMSF_pheno_bound <- vect(paste0(dirname(rstudioapi::getActiveDocumentContext()$path), "/PhenoHoles_Dissolve_20_v2.shp"))
+MMSF_pheno_bound <- readOGR(dsn = dirname(rstudioapi::getActiveDocumentContext()$path), 
+                            layer="PhenoHoles_Dissolve_20_v2")
 
 ##//other than the data listed in the Zenodo repository you 
 #    will need to independently go download data from:
