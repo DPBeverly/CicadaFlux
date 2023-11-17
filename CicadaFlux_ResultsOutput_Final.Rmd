@@ -87,7 +87,7 @@ setwd(project_dir)
 getwd()
 
 # Set DOI for the Zenodo record associated with this paper
-doi <- "10.5281/zenodo.8431547" 
+doi <- "10.5281/zenodo.10150209" 
 
 # Download the data from Zenodo
 
@@ -116,7 +116,7 @@ Rs_plots <- Rs_plots[Rs_plots$Corr_LinFlux<=6,]
 
 # Load the shapefiles
 #Collar Shapefiles
-MMSF_pheno <- readOGR(project_dir, layer="MMSF_Collars_v2")
+MMSF_pheno <- readOGR(project_dir, layer="PhenoHoles_MMSF_v2") 
 
 #plot Boundary shapefile 
 MMSF_pheno_bound <- readOGR(project_dir, layer="PhenoHoles_Dissolve_20_v2")
@@ -148,17 +148,22 @@ dat_46m <- read.csv(AmeriFlux_File,
 "https://daac.ornl.gov/CMS/guides/CMS_Global_Soil_Respiration.html"
 ##//Download data move .img files to a common working directory
 ##//  This analysis will use the mean, lower quantile (25) and upper quantile (75) estimates
+dir()
+##//Clipped .img files in working directories and update data pathways
+##//Mean Flux estimate
+SoilFlux_File <- file.path(project_dir, 
+                        "Clipped_soil_respiration_mean_eastern_US.img")
+SoilFlux <- read_stars(SoilFlux_File)
 
-##//After downloading .img files in working directories and update data pathways
-SoilFlux <- read_stars( paste(dirname(rstudioapi::getActiveDocumentContext()$path),
-  "CMS_Global_Soil_Respiration_1736/CMS_Global_Soil_Respiration_1736/data/Clipped_soil_respiration_mean_eastern_US.img",
-  sep = "/"))
-SoilFlux_25 <- read_stars(paste(dirname(rstudioapi::getActiveDocumentContext()$path),
-  "CMS_Global_Soil_Respiration_1736/CMS_Global_Soil_Respiration_1736/data/Clipped_soil_respiration_Q25_eastern_US.img",
-  sep = "/"))
-SoilFlux_75 <- read_stars(paste(dirname(rstudioapi::getActiveDocumentContext()$path),
-  "/CMS_Global_Soil_Respiration_1736/CMS_Global_Soil_Respiration_1736/data/Clipped_soil_respiration_Q75_eastern_US.img",
-  sep = "/"))
+##//25th Percentile 
+SoilFlux_25_File <- file.path(project_dir, 
+                        "Clipped_soil_respiration_Q25_eastern_US.img")
+SoilFlux_25 <- read_stars(SoilFlux_25_File)
+
+##//75th Percentile 
+SoilFlux_75_File <- file.path(project_dir, 
+                        "Clipped_soil_respiration_Q75_eastern_US.img")
+SoilFlux_75 <- read_stars(SoilFlux_75_File)
 
 # ##// Active cicada broods shapefiles "https://data.fs.usda.gov/geodata/edw/datasets.php?xmlKeyword=cicada"
 ##//Shapefile and Data frame with estimates of forest
@@ -693,7 +698,7 @@ load(paste(dirname(rstudioapi::getActiveDocumentContext()$path),
 ##// Uncomment to view model summaries and plots 
 # summary(fit_hole2x, prob = 0.89)
 summary(fit_hole2x, prob = 0.89)
-bayes_R2(Q10_mod1x, prob = c(0.055, 0.945))
+bayes_R2(fit_hole2x, prob = c(0.055, 0.945))
 
 ##//Calculate Q10
 fit_holex_ex2 <- prepare_predictions(fit_hole2x)
