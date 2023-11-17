@@ -86,6 +86,7 @@ theme_set(theme_classic())
 GoAvsGo <- c("#6F263D", "#236192", "#A2AAAD", "#000000")
 
 #################################################################
+
 ##//Update where you have code, data, and working directory defined
 MyDir <- dirname(rstudioapi::getActiveDocumentContext()$path)
 
