@@ -105,6 +105,7 @@ To reproduce the analysis presented in the manuscript, follow these steps:
 3. **AmeriFlux Data Download**
    - Obtain the AmeriFlux micrometeorological data associated with the US-MMS site from the AmeriFlux website: https://ameriflux.lbl.gov/sites/siteinfo/US-MMS
    - Download the US-MMS Base version (CC-BY-4.0) which contains hourly flux and meteorological variables.
+   - Definitions of the data variables and units are described in detail on the AmeriFlux Website: https://ameriflux.lbl.gov/data/aboutdata/data-variables/
 
 4. **Data Preparation**
    - Once downloaded, unzip the folder in the working directory where the R Markdown files are located.
