@@ -163,6 +163,10 @@ AmeriFlux_File <- paste(dirname(rstudioapi::getActiveDocumentContext()$path),
 dat_46m <- read.csv(AmeriFlux_File, 
                     skip = 2, na.strings = -9999)
 
+
+```
+
+```{r}
 ####//Global respiration estimates
 ##//Soil respiration rasters are obstained from Global Gridded 1-km Annual Soil Respiration and Uncertainty Derived from SRDB V3
 "https://daac.ornl.gov/CMS/guides/CMS_Global_Soil_Respiration.html"
@@ -191,9 +195,6 @@ cicadaForestpolys <- st_read(paste(dirname(rstudioapi::getActiveDocumentContext(
 # ##  download shapefiles, move files to working directory, and update pathways
 # statepolys <- st_read("D:/Dropbox/Projects/Indiana/Data/GIS/tl_2021_us_state/tl_2021_us_state.shp")
 # state_polys <- statepolys %>% st_transform("+proj=moll")
-
-
-
 ```
 
   
@@ -312,8 +313,6 @@ ggplot() +
 ```
 
 *Figure:* Soil temperature (**a)**) and moisture (**b)**) corresponding to soil respiration observations  (**c)**)  located at base of trees associated with arbuscular mycorrhizal and ectomycorrhizal fungi. Measurements represent weekly responses as soil respiration measurements were conducted on different days within the same week. Additional figure highlights the change in cicada holes throughout the summer of 2021
-
-
 
 
 ```{r, echo=FALSE}
@@ -631,6 +630,7 @@ AM_scaler <- (AM_1_scaler + AM_2_scaler) / 2
 EcM_scaler <- (EcM_1_scaler + EcM_2_scaler) / 2
 
 ```
+
 *Figure 3:* Soil respiration for cicada holes (**a)**) and seasonal trends (**b)**) with respect to the fungal type 
 
 
