@@ -37,52 +37,50 @@ editor_options:
 ###     sjstats; RColorBrewer; tidybayes; dplyr; tidyr; tidyselect; stringr; gridExtra; stars; rstan
 ### NOTE: Running entire script with models and model outputs will take several hours and require upwards of 33 GB of RAM
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo=FALSE) 
+
+# Load Packages
+packages <- c("zen4R", "rstudioapi", "readr", "emmeans", "sf", "raster", "gstat", 
+              "fields", "tidyverse", "maptools", "tmap", "sp", "readxl", "ggplot2", 
+              "lubridate", "hutils", "brms", "modelr", "sjPlot", "sjstats", 
+              "RColorBrewer", "tidybayes", "dplyr", "tidyr", "tidyselect", "stringr", 
+              "gridExtra", "stars", "rstan")
+
+for (pkg in packages) {
+  if (!require(pkg, character.only = TRUE)) {
+    warning(paste("Package", pkg, "is not installed. Attempting to install it."))
+    install.packages(pkg)
+    library(pkg, character.only = TRUE)
+  }
+}
+
+# Install rgdal if not available
+if (!require("rgdal", character.only = TRUE)) {
+  message("rgdal is not available on CRAN. A legacy version can be installed from the CRAN archive. Please refer to the supplementary instructions document for installation details.")
+  # Supplementary instructions can detail the process to download and install from archive
+}
+
+# Install geoR with XQuartz dependency note for MacOS users
+if (!require("geoR", character.only = TRUE)) {
+  message("geoR may require XQuartz to be installed on macOS. Please refer to the supplementary instructions document for installation details.")
+}
+
+# Themes and color ramps
+theme_set(theme_classic())
+GoAvsGo <- c("#6F263D", "#236192", "#A2AAAD", "#000000")
+```
 
 
-```{r echo=FALSE, include = FALSE}
-knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
-##// This Initial part of the script is used for data management purposes have been LiCor 8100 files are combined, and corrected for collar spacing, as well as compiled with soil moisture and associate meta data. The complete and compiled files used throughout the analysis are available via Zenodo and codes are available via GitHub. The raw 8100 files are available via emailing the dbeverl@iu.edu
+```{r, download_data, echo=FALSE, include = FALSE}
+
+# This chunk is used for data management purposes have been LiCor 8100 files are combined, and corrected for collar spacing, as well as compiled with soil moisture and associate meta data. The complete and compiled files used throughout the analysis are available via Zenodo and codes are available via GitHub. The raw 8100 files are available via emailing the dbeverl@iu.edu
 
 ##//Package management
 ##//This script helps outline data used in the analysis of cicada hole effects on soil respiration
-# Load the zen4R library and other packages
-library(zen4R)
-library(rstudioapi)
-library(readr)
-library(emmeans)
-library(sf)
-library(raster)
-library(geoR) # If you have a mac, you may have issues with this package. It requires XQuartz to be installed, which is not natively included in some versions of MacOS. 
-library(gstat)
-library(fields)
-library(rgdal) #rgdal is no longer available on CRAN. If you do not have installed, you can install a legacy version from the CRAN archive, which are available here: https://cran.r-project.org/src/contrib/Archive/rgdal/
 
-#Note: the rgdal package will require GDAL to be installed on your machine. You can usually install it through your system's package manager (like apt-get on Ubuntu, brew on macOS, or conda for Conda environments).
-library(tidyverse)
-library(maptools) 
-library(tmap)
-library(sp) 
-library(readxl)
-library(ggplot2)
-library(lubridate)
-library(hutils)
-library(brms)
-library(modelr)
-library(sjPlot)
-library(sjstats)
-library(RColorBrewer)
-library(tidybayes)
-library(dplyr)
-library(tidyr)
-library(tidyselect)
-library(stringr)
-library(gridExtra)
-library(stars)
-library(rstan)
 
-##//Themes and color ramps
-theme_set(theme_classic())
-GoAvsGo <- c("#6F263D", "#236192", "#A2AAAD", "#000000")
+
 
 #################################################################
 
