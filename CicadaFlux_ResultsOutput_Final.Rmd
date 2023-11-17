@@ -99,7 +99,7 @@ CicadaData <- download_zenodo(
   quiet = FALSE)
 
 # Check to make sure the data files have been downloaded to the correct directory
-dir(project_directory)
+dir(project_dir)
 
 # Read in the cicada hole data and update string names
 meholes_filepath <- file.path(project_dir, "MMSF_GW_KF_CICADAHOLES_2021.csv")
@@ -128,15 +128,13 @@ MMSF_pheno_bound <- readOGR(project_dir, layer="PhenoHoles_Dissolve_20_v2")
 # Note: File paths may need updating based on the dataset version
 
 # Unzip the data file containing the hourly fluxes and meterological variables
-unzip("AMF_US-MMS_BASE_BADM_21-5.zip", exdir = project_dir)
+unzip(file.path(project_dir, "AMF_US-MMS_BASE-BADM_21-5.zip"))
 
 #Then load the .csv file 
 AmeriFlux_File <- file.path(project_dir, 
                         "AMF_US-MMS_BASE-BADM_21-5/AMF_US-MMS_BASE_HR_21-5.csv")
 dat_46m <- read.csv(AmeriFlux_File, 
                     skip = 2, na.strings = -9999)
-
-
 ```
 
 ```{r, download_raster_data}
