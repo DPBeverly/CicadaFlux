@@ -73,99 +73,79 @@ GoAvsGo <- c("#6F263D", "#236192", "#A2AAAD", "#000000")
 
 
 ```{r, download_data, echo=FALSE, include = FALSE}
+# This chunk handles the data download and initial processing.
+# Actions include: combining LiCor 8100 files, correcting for collar spacing, compiling with soil moisture and meta data. 
+# For raw files or troubleshooting, contact dbeverl@iu.edu
 
-# This chunk is used for data management purposes have been LiCor 8100 files are combined, and corrected for collar spacing, as well as compiled with soil moisture and associate meta data. The complete and compiled files used throughout the analysis are available via Zenodo and codes are available via GitHub. The raw 8100 files are available via emailing the dbeverl@iu.edu
+# Define the project directory
+project_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
 
-##//Package management
-##//This script helps outline data used in the analysis of cicada hole effects on soil respiration
+# Set the directory 
+setwd(project_dir)
 
-
-
-
-#################################################################
-
-##//Update where you have code, data, and working directory defined
-MyDir <- dirname(rstudioapi::getActiveDocumentContext()$path)
-
-##//Set the directory 
-setwd(MyDir)
+#Check it's worked properly
 getwd()
 
-##// Or chose the directory 
-# choose.dir()
-# dirname(rstudioapi::getActiveDocumentContext()$path)
-
-##//Define the DOI for the Zenodo record you want to download data from
+# Set DOI for the Zenodo record associated with this paper
 doi <- "10.5281/zenodo.8431547" 
 
-dir(dirname(rstudioapi::getActiveDocumentContext()$path))
+# Download the data from Zenodo
 
-##//Download data from Zenodo
 CicadaData <- download_zenodo(
   doi,
-  path = dirname(rstudioapi::getActiveDocumentContext()$path),
+  path = project_dir,
   files = list(),
   logger = NULL,
   quiet = FALSE)
 
-##//Check to make sure the data files have been downloaded to the correct directory
-dir(dirname(rstudioapi::getActiveDocumentContext()$path))
+# Check to make sure the data files have been downloaded to the correct directory
+dir(project_directory)
 
-##//Read in the chamber data
-Rs_plots <- read_csv(paste(dirname(rstudioapi::getActiveDocumentContext()$path), 
-                           "CicadaChamberFlux_2021.csv", sep = "/"))
+# Read in the cicada hole data and update string names
+meholes_filepath <- file.path(project_dir, "MMSF_GW_KF_CICADAHOLES_2021.csv")
+meholes <- read_csv(meholes_filepath) %>%
+  mutate(Fungi_Type = if_else(Fungi_Type == "ECM", "EcM", Fungi_Type)) #Updating string names
 
-##//Removing the one outlier in the data
+# Read in the chamber data
+
+Rs_plots_filepath <- file.path(project_dir, "CicadaChamberFlux_2021.csv")
+Rs_plots <- read_csv(Rs_plots_filepath)
+
+# Removing an outlier in the data
 Rs_plots <- Rs_plots[Rs_plots$Corr_LinFlux<=6,]
 
-##//Read in the cicada hole data
-meholes <- read_csv(paste(dirname(rstudioapi::getActiveDocumentContext()$path), 
-                           "MMSF_GW_KF_CICADAHOLES_2021.csv", sep = "/"))
+# Load the shapefiles
+#Collar Shapefiles
+MMSF_pheno <- readOGR(project_dir, layer="MMSF_Collars_v2")
 
-##//Updating string names
-meholes$Fungi_Type <- ifelse(meholes$Fungi_Type=="ECM", "EcM", meholes$Fungi_Type)
-
-##//Shapefiles used in the study 
-##//Collar shapefiles
-
-MMSF_pheno <- readOGR(dsn = dirname(rstudioapi::getActiveDocumentContext()$path), 
-                      layer="MMSF_Collars_v2")
-###//Plot boundary
-MMSF_pheno_bound <- readOGR(dsn = dirname(rstudioapi::getActiveDocumentContext()$path), 
-                            layer="PhenoHoles_Dissolve_20_v2")
-
-##//other than the data listed in the Zenodo repository you 
-#    will need to independently go download data from:
-    # Global Gridded 1-km Annual Soil Respiration and Uncertainty Derived from SRDB V3
-    # Active brood maps provided by the USDA
+#plot Boundary shapefile 
+MMSF_pheno_bound <- readOGR(project_dir, layer="PhenoHoles_Dissolve_20_v2")
 
 
-##//Micromet data is provided in the AMF_US-MMS_BASE_BADM_21-5.zip file. Can also be obtained from AmeriFlux website
+# Micromet data is provided in the AMF_US-MMS_BASE_BADM_21-5.zip file. Can also be obtained from AmeriFlux website
 "https://ameriflux.lbl.gov/sites/siteinfo/US-MMS"
-#//Download the US-MMS Base version (CC-BY-4.0) containing data hourly fluxes and meteorological variables
-##//Once downloaded unzip the folder in the working directory
-##//Note the data you download will contain more data than used in the manuscript as data is updated quarterly
+# Read in the AmeriFlux micrometeorological data
+# Note: File paths may need updating based on the dataset version
 
-##//AmeriFlux data
-##//This is only an example the data file name may change based on when data is downloaded
-##//Update the file path to match local pathways 
-
-##//This is only an example the data file name may change based on when data is downloaded!!!!!!!!!!
-
-# To use the provided file, first, unzip it. 
-unzip(zipfile = paste(dirname(rstudioapi::getActiveDocumentContext()$path), "AMF_US-MMS_BASE-BADM_21-5.zip", sep="/"))
+# Unzip the data file containing the hourly fluxes and meterological variables
+unzip("AMF_US-MMS_BASE_BADM_21-5.zip", exdir = project_dir)
 
 #Then load the .csv file 
-AmeriFlux_File <- paste(dirname(rstudioapi::getActiveDocumentContext()$path), 
-                        "AMF_US-MMS_BASE-BADM_21-5/AMF_US-MMS_BASE_HR_21-5.csv" , sep = "/")
+AmeriFlux_File <- file.path(project_dir, 
+                        "AMF_US-MMS_BASE-BADM_21-5/AMF_US-MMS_BASE_HR_21-5.csv")
 dat_46m <- read.csv(AmeriFlux_File, 
                     skip = 2, na.strings = -9999)
 
 
 ```
 
-```{r}
+```{r, download_raster_data}
 ####//Global respiration estimates
+##//other than the data listed in the Zenodo repository you 
+#    will need to independently go download data from:
+    # Global Gridded 1-km Annual Soil Respiration and Uncertainty Derived from SRDB V3
+    # Active brood maps provided by the USDA
+
 ##//Soil respiration rasters are obstained from Global Gridded 1-km Annual Soil Respiration and Uncertainty Derived from SRDB V3
 "https://daac.ornl.gov/CMS/guides/CMS_Global_Soil_Respiration.html"
 ##//Download data move .img files to a common working directory
