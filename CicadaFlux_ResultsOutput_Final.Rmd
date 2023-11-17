@@ -131,19 +131,18 @@ meholes$Fungi_Type <- ifelse(meholes$Fungi_Type=="ECM", "EcM", meholes$Fungi_Typ
 ##//Collar shapefiles
 
 MMSF_pheno <- readOGR(dsn = dirname(rstudioapi::getActiveDocumentContext()$path), 
-                      layer="PhenoHoles_MMSF_v2")
+                      layer="MMSF_Collars_v2")
 ###//Plot boundary
 MMSF_pheno_bound <- readOGR(dsn = dirname(rstudioapi::getActiveDocumentContext()$path), 
                             layer="PhenoHoles_Dissolve_20_v2")
 
 ##//other than the data listed in the Zenodo repository you 
 #    will need to independently go download data from:
-    # AmeriFlux for the US-MMS site
     # Global Gridded 1-km Annual Soil Respiration and Uncertainty Derived from SRDB V3
     # Active brood maps provided by the USDA
 
 
-##//Grab micromet data from AmeriFlux website
+##//Micromet data is provided in the AMF_US-MMS_BASE_BADM_21-5.zip file. Can also be obtained from AmeriFlux website
 "https://ameriflux.lbl.gov/sites/siteinfo/US-MMS"
 #//Download the US-MMS Base version (CC-BY-4.0) containing data hourly fluxes and meteorological variables
 ##//Once downloaded unzip the folder in the working directory
@@ -154,6 +153,11 @@ MMSF_pheno_bound <- readOGR(dsn = dirname(rstudioapi::getActiveDocumentContext()
 ##//Update the file path to match local pathways 
 
 ##//This is only an example the data file name may change based on when data is downloaded!!!!!!!!!!
+
+# To use the provided file, first, unzip it. 
+unzip(zipfile = paste(dirname(rstudioapi::getActiveDocumentContext()$path), "AMF_US-MMS_BASE-BADM_21-5.zip", sep="/"))
+
+#Then load the .csv file 
 AmeriFlux_File <- paste(dirname(rstudioapi::getActiveDocumentContext()$path), 
                         "AMF_US-MMS_BASE-BADM_21-5/AMF_US-MMS_BASE_HR_21-5.csv" , sep = "/")
 dat_46m <- read.csv(AmeriFlux_File, 
